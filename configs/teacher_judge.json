@@ -1,0 +1,17 @@
+{
+  "default_input": "data/splits/teacher_judge/pilot/pilot_candidates_all.jsonl",
+  "default_prompt_template": "prompts/teacher_judge_prompt.md",
+  "default_output_dir": "data/labeled/teacher_judge",
+  "provider": "openai_compatible",
+  "environment_variables": {
+    "api_key": "TEACHER_API_KEY or OPENAI_API_KEY",
+    "base_url": "TEACHER_BASE_URL",
+    "model": "TEACHER_MODEL"
+  },
+  "pilot_first": true,
+  "notes": [
+    "Run dry-run first to inspect rendered prompts.",
+    "Run real labeling only after prompt and sample sanity checks.",
+    "The full 3600-candidate set should be labeled after pilot validation."
+  ]
+}

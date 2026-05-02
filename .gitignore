@@ -1,0 +1,37 @@
+# Raw and generated data
+data/raw/
+data/processed/**/*.jsonl
+data/processed/**/*.json
+data/labeled/**/*.jsonl
+data/scored/**/*.jsonl
+data/scored/**/*.json
+data/splits/**/*.jsonl
+data/splits/**/*.json
+
+# Model and experiment outputs
+outputs/
+checkpoints/
+saves/
+llamafactory_outputs/
+wandb/
+*.log
+
+# Python / notebook cache
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Local secrets and environment files
+.env
+.env.*
+
+# Large model artifacts, if any are accidentally written inside the repo
+*.safetensors
+*.bin
+*.pt
+*.pth

@@ -1,0 +1,15 @@
+{
+  "records": 208,
+  "keep_precision": 0.78,
+  "keep_recall": 0.8602941176470589,
+  "drop_precision": 0.5517241379310345,
+  "drop_recall": 0.5818181818181818,
+  "maybe_recall": 0.0,
+  "category_counts": {
+    "drop_pred_keep": 23,
+    "keep_pred_drop": 19,
+    "maybe_missed": 17,
+    "score_error_ge_2": 57,
+    "cot_zh_errors": 49
+  }
+}

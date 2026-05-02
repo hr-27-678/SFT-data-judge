@@ -1,0 +1,41 @@
+{
+  "split": "valid_greedy",
+  "run_name": "scorer_sft_1000_qwen3_4b_lora_e3_greedy",
+  "records": 104,
+  "prediction_file": "C:\\Users\\haoran27\\llamafactory_outputs\\scorer_sft_1000_qwen3_4b_lora_e3_predict_valid_greedy\\generated_predictions.jsonl",
+  "reference_file": "SFT-DataJudge\\data\\labeled\\scorer_sft\\scorer_sft_1000_valid.jsonl",
+  "valid_prediction_json": 104,
+  "valid_prediction_json_rate": 1.0,
+  "valid_label_json": 104,
+  "prediction_schema_valid": 104,
+  "prediction_schema_valid_rate": 1.0,
+  "score_exact": 58,
+  "score_exact_rate": 0.5576923076923077,
+  "score_within_1": 78,
+  "score_within_1_rate": 0.75,
+  "score_mae": 0.9230769230769231,
+  "verdict_accuracy": 77,
+  "verdict_accuracy_rate": 0.7403846153846154,
+  "label_verdict_counts": {
+    "drop": 28,
+    "maybe": 9,
+    "keep": 67
+  },
+  "pred_verdict_counts": {
+    "drop": 30,
+    "keep": 74
+  },
+  "label_score_counts": {
+    "2": 12,
+    "3": 9,
+    "4": 13,
+    "1": 16,
+    "5": 54
+  },
+  "pred_score_counts": {
+    "2": 15,
+    "5": 74,
+    "1": 15
+  },
+  "bad_examples": []
+}

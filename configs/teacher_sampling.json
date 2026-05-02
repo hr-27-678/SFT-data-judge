@@ -1,0 +1,20 @@
+{
+  "source_sizes": {
+    "cot_zh": 1200,
+    "finetome": 1200,
+    "openmath_reasoning": 1200
+  },
+  "flagged_ratio": 0.2,
+  "length_buckets": ["short", "medium", "long"],
+  "split_ratio": {
+    "train": 0.8,
+    "valid": 0.1,
+    "test": 0.1
+  },
+  "seed": 42,
+  "notes": [
+    "Sampling is source-separated.",
+    "Within each source, sample clean/flagged examples and length buckets.",
+    "Teacher labels are not generated in phase 2."
+  ]
+}

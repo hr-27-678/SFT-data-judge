@@ -1,0 +1,26 @@
+{
+  "split": "test_greedy",
+  "run_name": "scorer_binary_confident_1000_qwen3_4b_lora_e3",
+  "records": 96,
+  "valid_prediction_json": 96,
+  "valid_prediction_json_rate": 1.0,
+  "prediction_schema_valid": 96,
+  "prediction_schema_valid_rate": 1.0,
+  "valid_label_json": 96,
+  "accuracy": 73,
+  "accuracy_rate": 0.7604166666666666,
+  "keep_precision": 0.8709677419354839,
+  "keep_recall": 0.782608695652174,
+  "keep_f1": 0.8244274809160306,
+  "not_keep_precision": 0.5588235294117647,
+  "not_keep_recall": 0.7037037037037037,
+  "not_keep_f1": 0.6229508196721312,
+  "label_counts": {
+    "keep": 69,
+    "not_keep": 27
+  },
+  "prediction_counts": {
+    "keep": 62,
+    "not_keep": 34
+  }
+}

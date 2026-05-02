@@ -1,0 +1,38 @@
+{
+  "scorer_binary_confident_1000_all": {
+    "file_name": "scorer_binary_confident_1000_all.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "scorer_binary_confident_1000_train": {
+    "file_name": "scorer_binary_confident_1000_train.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "scorer_binary_confident_1000_valid": {
+    "file_name": "scorer_binary_confident_1000_valid.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "scorer_binary_confident_1000_test": {
+    "file_name": "scorer_binary_confident_1000_test.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  }
+}
