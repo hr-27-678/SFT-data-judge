@@ -2,6 +2,45 @@
 
 Last updated: 2026-05-01
 
+## Resume Here
+
+This is the first file a future Codex session should read.
+
+Current repository:
+
+- Local path: `\\ad.uillinois.edu\engr-ews\haoran27\微调\SFT-DataJudge`
+- GitHub: `https://github.com/hr-27-678/SFT-data-judge.git`
+- Branch: `main`
+- Initial pushed commit: `7b701c6 Initial project cleanup and scorer reports`
+
+Recommended reading order for a fresh session:
+
+1. `PROJECT_PLAN.md`
+2. `PROJECT_FILE_INVENTORY.md`
+3. `reports/README.md`
+4. `scripts/README.md`
+5. `reports/scorer_binary_experiment_report.md`
+
+The school computer does not preserve conversation progress, so this file should
+be treated as the project memory.
+
+## Current State Snapshot
+
+The project has completed one full starter loop:
+
+1. sampled 1,000 teacher-label candidates
+2. labeled them with the teacher model
+3. built original 1-5 scorer SFT data
+4. trained a Qwen3-4B LoRA scorer
+5. evaluated valid/test behavior
+6. found that the 1-5 score task was too fuzzy around score 3 / `maybe`
+7. rebuilt a binary confident dataset
+8. trained and evaluated the binary confident scorer
+9. organized project files and pushed the current repo to GitHub
+
+The current best direction is the binary confident scorer, not the original
+1-5 scorer.
+
 ## Goal
 
 Build a small local data-quality scorer for supervised fine-tuning samples. The
@@ -70,6 +109,17 @@ Interpretation:
 - It is not yet strong enough to automatically discard data without a human or
   teacher-model review layer.
 
+Local model artifacts are not committed to GitHub. The important local adapter
+paths are:
+
+- Original 1-5 scorer:
+  `C:\Users\haoran27\llamafactory_outputs\scorer_sft_1000_qwen3_4b_lora_e3`
+- Binary confident scorer:
+  `C:\Users\haoran27\llamafactory_outputs\scorer_binary_confident_1000_qwen3_4b_lora_e3`
+
+Use the binary confident adapter for future scorer experiments unless there is
+a specific reason to inspect the older 1-5 scorer.
+
 ## Why the Binary Task Exists
 
 The original 1-5 score task worked technically, but the middle class was noisy:
@@ -96,6 +146,27 @@ Recommended next work:
 6. Only after the binary scorer is stable, consider adding a second-stage
    severity score or a calibrated confidence score.
 
+Concrete next implementation plan:
+
+1. Add an inference script that applies the binary scorer to unlabeled candidate
+   JSONL files and writes predictions incrementally with resume support.
+2. Run it on the remaining teacher-candidate pool or a larger clean processed
+   pool.
+3. Build an analysis report with:
+   - predicted keep/not_keep counts
+   - source-wise distribution
+   - high-confidence examples
+   - likely false positives and false negatives
+4. Pick a small review set for teacher relabeling:
+   - uncertain cases
+   - confident `not_keep` cases from weak sources
+   - examples where rule flags and model prediction disagree
+5. Use the new teacher labels to expand the binary confident training set.
+
+Avoid spending much more effort on the 1-5 score setup until the binary filter
+is more stable. The 1-5 scorer is useful as an error-analysis reference, but it
+is not the best current training target.
+
 ## GitHub Notes
 
 Commit:
@@ -116,3 +187,8 @@ Do not commit:
 - Hugging Face cache files
 - LLaMA-Factory model outputs
 - local checkpoint directories
+
+Current `.gitignore` is set up to ignore generated JSONL files, processed data,
+splits, Python caches, local checkpoints, model weights, and environment files.
+If future work creates new generated directories, update `.gitignore` before
+committing.
