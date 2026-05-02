@@ -1,8 +1,29 @@
-# Scorer Error Analysis
+# Original 1-5 Scorer Error Analysis Report (Historical)
 
-Generated: 2026-05-01 17:13:37
+## Report Metadata
 
-## Summary
+| Field | Value |
+| --- | --- |
+| Generated | 2026-05-01 17:13:37 |
+| Report type | Error analysis |
+| Project stage | Original 1-5 scorer |
+| Report status | Historical diagnostic |
+| Evaluation mode | Sampling-based / non-canonical |
+| Current use | Diagnose why the project moved to binary scoring |
+
+## Experiment Context
+
+| Field | Value |
+| --- | --- |
+| Model family | Qwen3-4B LoRA scorer |
+| Run name | `scorer_sft_1000_qwen3_4b_lora_e3` |
+| Data version | `scorer_sft_1000` |
+| Label space | score 1-5 plus verdict `keep` / `maybe` / `drop` |
+| Splits analyzed | valid + test |
+| Records | 208 |
+| Canonical replacement | `reports/scorer_error_analysis_greedy_report.md` |
+
+## Metrics Summary
 
 | Metric | Value |
 | --- | --- |
@@ -23,14 +44,14 @@ Generated: 2026-05-01 17:13:37
 | score error >= 2 | 67 | Model is not just off by one. |
 | cot_zh score/verdict errors | 62 | Main weak source. |
 
-## By Split
+## Split Breakdown
 
 | Split | Records | Verdict acc | Score exact | Score +/-1 | drop->keep | keep->drop | maybe missed |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | test | 104 | 59.62% | 43.27% | 63.46% | 14 | 16 | 8 |
 | valid | 104 | 68.27% | 51.92% | 72.12% | 11 | 11 | 9 |
 
-## By Source
+## Source Breakdown
 
 | Source | Records | Verdict acc | Score exact | Score +/-1 | drop->keep | keep->drop | maybe missed |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -38,7 +59,7 @@ Generated: 2026-05-01 17:13:37
 | finetome | 84 | 69.05% | 53.57% | 70.24% | 13 | 8 | 4 |
 | openmath_reasoning | 40 | 90.00% | 80.00% | 90.00% | 3 | 0 | 1 |
 
-## Diagnosis
+## Key Findings
 
 - The model has learned the output schema, but it is not yet a reliable teacher replacement.
 - The dominant failure is calibration, not JSON formatting.
@@ -46,7 +67,7 @@ Generated: 2026-05-01 17:13:37
 - `maybe` is not learned as a real middle class. It is treated as either keep or drop, so a 3-way scorer is currently poorly calibrated.
 - For filtering, `keep` precision is usable for a first-pass high-quality pool, but `drop` recall is too low to safely remove all bad data.
 
-## Recommended Adjustments
+## Recommended Next Actions
 
 1. Do not tune hyperparameters first. The bottleneck is data coverage and label boundary calibration.
 2. Add targeted teacher labels: more `cot_zh`, more `maybe`, and more `drop` cases that look superficially fluent.

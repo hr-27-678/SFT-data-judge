@@ -1,0 +1,26 @@
+{
+  "split": "valid",
+  "run_name": "scorer_binary_v2_conservative_qwen3_8b_lora_e3",
+  "records": 224,
+  "valid_prediction_json": 224,
+  "valid_prediction_json_rate": 1.0,
+  "prediction_schema_valid": 224,
+  "prediction_schema_valid_rate": 1.0,
+  "valid_label_json": 224,
+  "accuracy": 167,
+  "accuracy_rate": 0.7455357142857143,
+  "keep_precision": 0.738562091503268,
+  "keep_recall": 0.8692307692307693,
+  "keep_f1": 0.7985865724381626,
+  "not_keep_precision": 0.7605633802816901,
+  "not_keep_recall": 0.574468085106383,
+  "not_keep_f1": 0.6545454545454545,
+  "label_counts": {
+    "not_keep": 94,
+    "keep": 130
+  },
+  "prediction_counts": {
+    "keep": 153,
+    "not_keep": 71
+  }
+}

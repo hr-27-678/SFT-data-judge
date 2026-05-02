@@ -1,8 +1,29 @@
-# Scorer Error Analysis
+# Original 1-5 Scorer Error Analysis Report (Greedy)
 
-Generated: 2026-05-01 17:32:43
+## Report Metadata
 
-## Summary
+| Field | Value |
+| --- | --- |
+| Generated | 2026-05-01 17:32:43 |
+| Report type | Error analysis |
+| Project stage | Original 1-5 scorer |
+| Report status | Canonical diagnostic for the 1-5 scorer |
+| Evaluation mode | Greedy deterministic prediction |
+| Current use | Diagnose why the project moved to binary scoring |
+
+## Experiment Context
+
+| Field | Value |
+| --- | --- |
+| Model family | Qwen3-4B LoRA scorer |
+| Run name | `scorer_sft_1000_qwen3_4b_lora_e3` |
+| Data version | `scorer_sft_1000` |
+| Label space | score 1-5 plus verdict `keep` / `maybe` / `drop` |
+| Splits analyzed | `valid_greedy` + `test_greedy` |
+| Records | 208 |
+| Related reports | `scorer_eval_valid_greedy_report.md`, `scorer_eval_test_greedy_report.md` |
+
+## Metrics Summary
 
 | Metric | Value |
 | --- | --- |
@@ -23,14 +44,14 @@ Generated: 2026-05-01 17:32:43
 | score error >= 2 | 57 | Model is not just off by one. |
 | cot_zh score/verdict errors | 49 | Main weak source. |
 
-## By Split
+## Split Breakdown
 
 | Split | Records | Verdict acc | Score exact | Score +/-1 | drop->keep | keep->drop | maybe missed |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | test_greedy | 104 | 69.23% | 56.73% | 70.19% | 14 | 10 | 8 |
 | valid_greedy | 104 | 74.04% | 55.77% | 75.00% | 9 | 9 | 9 |
 
-## By Source
+## Source Breakdown
 
 | Source | Records | Verdict acc | Score exact | Score +/-1 | drop->keep | keep->drop | maybe missed |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -38,7 +59,7 @@ Generated: 2026-05-01 17:32:43
 | finetome | 84 | 70.24% | 57.14% | 70.24% | 14 | 7 | 4 |
 | openmath_reasoning | 40 | 90.00% | 85.00% | 90.00% | 3 | 0 | 1 |
 
-## Diagnosis
+## Key Findings
 
 - The model has learned the output schema, but it is not yet a reliable teacher replacement.
 - The dominant failure is calibration, not JSON formatting.
@@ -46,7 +67,7 @@ Generated: 2026-05-01 17:32:43
 - `maybe` is not learned as a real middle class. It is treated as either keep or drop, so a 3-way scorer is currently poorly calibrated.
 - For filtering, `keep` precision is usable for a first-pass high-quality pool, but `drop` recall is too low to safely remove all bad data.
 
-## Recommended Adjustments
+## Recommended Next Actions
 
 1. Do not tune hyperparameters first. The bottleneck is data coverage and label boundary calibration.
 2. Add targeted teacher labels: more `cot_zh`, more `maybe`, and more `drop` cases that look superficially fluent.

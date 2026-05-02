@@ -1,15 +1,32 @@
 # Scorer Eval Report (test_greedy)
 
-Generated: 2026-05-01 17:32:42
+## Report Metadata
 
-## Run
+| Field | Value |
+| --- | --- |
+| Generated | 2026-05-01 17:32:42 |
+| Report type | Split evaluation |
+| Project stage | Original 1-5 scorer |
+| Report status | Canonical greedy test evaluation for 1-5 scorer |
 
+## Experiment Context
+
+| Field | Value |
+| --- | --- |
+| Model | Qwen3-4B LoRA scorer |
+| Data version | `scorer_sft_1000` |
+| Split | test_greedy |
+| Evaluation mode | Greedy deterministic prediction |
+| Run name | `scorer_sft_1000_qwen3_4b_lora_e3_greedy` |
+| Label space | score 1-5 plus verdict `keep` / `maybe` / `drop` |
+| Current use | Historical baseline showing why binary target was needed |
+
+## Run Artifacts
 - Run name: `scorer_sft_1000_qwen3_4b_lora_e3_greedy`
 - Predictions: `C:\Users\haoran27\llamafactory_outputs\scorer_sft_1000_qwen3_4b_lora_e3_predict_test_greedy\generated_predictions.jsonl`
 - Reference: `SFT-DataJudge\data\labeled\scorer_sft\scorer_sft_1000_test.jsonl`
 
-## Summary
-
+## Metrics Summary
 | Metric | Value |
 | --- | --- |
 | Records | 104 |
@@ -37,8 +54,7 @@ Generated: 2026-05-01 17:32:42
 | 4 | 14 | 0 |
 | 5 | 55 | 76 |
 
-## Per Source
-
+## Source Breakdown
 | Source | Records | JSON valid | Schema valid | Score exact | Score +/-1 | Verdict acc |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | cot_zh | 42 | 100.00% | 100.00% | 35.71% | 57.14% | 54.76% |

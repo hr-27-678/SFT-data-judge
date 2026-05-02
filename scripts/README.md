@@ -1,6 +1,6 @@
 # Script Index
 
-Last updated: 2026-05-01
+Last updated: 2026-05-02
 
 Run scripts from the repository root unless a script says otherwise.
 
@@ -20,6 +20,10 @@ Run scripts from the repository root unless a script says otherwise.
   - Supports resume-style operation by skipping examples already written.
 - `05_analyze_teacher_labels.py`
   - Summarizes teacher labels and writes label reports.
+- `11_build_targeted_teacher_batch.py`
+  - Builds the next targeted 1,200-example teacher-labeling batch.
+  - Prioritizes `cot_zh`, score-3-like review cases, rule-flagged review cases,
+    and hard source-specific examples.
 
 ## Scorer Dataset Builders
 
@@ -27,7 +31,11 @@ Run scripts from the repository root unless a script says otherwise.
   - Converts teacher labels into the original 1-5 scorer SFT dataset.
 - `09_build_binary_scorer_sft.py`
   - Converts confident teacher labels into the binary scorer dataset.
-  - Uses score 4/5 as `keep`, score 1/2 as `not_keep`, and skips score 3.
+  - Supports merging multiple teacher-label prefixes and candidate files.
+  - In `confident` mode, uses score 4/5 as `keep`, score 1/2 as `not_keep`,
+    and skips score 3.
+  - In `all` mode, maps score 3 to `not_keep` for a conservative quality-first
+    training target.
 
 ## Evaluation
 

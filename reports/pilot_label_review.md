@@ -1,5 +1,24 @@
 # Pilot Label Review
 
+## Report Metadata
+
+| Field | Value |
+| --- | --- |
+| Generated | Manual pilot review |
+| Report type | Teacher label sanity review |
+| Project stage | Pilot teacher labeling |
+| Report status | Historical pilot diagnostic |
+
+## Experiment Context
+
+| Field | Value |
+| --- | --- |
+| Model | Teacher judge model |
+| Data version | `pilot_teacher_labels` |
+| Records | 60 |
+| Sources | 20 `cot_zh` / 20 `finetome` / 20 `openmath_reasoning` |
+| Current use | Early sanity check before starter-scale labeling |
+
 Reviewed file: `data/labeled/teacher_judge/pilot_teacher_labels.jsonl`
 
 ## Validation

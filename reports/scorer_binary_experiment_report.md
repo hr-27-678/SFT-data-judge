@@ -1,6 +1,23 @@
 # Binary Scorer Experiment Report
 
-Generated: 2026-05-01
+## Report Metadata
+
+| Field | Value |
+| --- | --- |
+| Generated | 2026-05-01 |
+| Report type | Training + evaluation summary |
+| Project stage | V1 binary confident scorer |
+| Report status | Compact baseline experiment |
+
+## Experiment Context
+
+| Field | Value |
+| --- | --- |
+| Model | `Qwen/Qwen3-4B-Instruct-2507` |
+| Data version | `scorer_binary_confident_1000` |
+| Run name | `scorer_binary_confident_1000_qwen3_4b_lora_e3` |
+| Label policy | score 4/5 -> `keep`; score 1/2 -> `not_keep`; score 3 skipped |
+| Current use | Compact baseline for later 8B and v2 comparisons |
 
 ## Goal
 

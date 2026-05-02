@@ -194,8 +194,23 @@ def call_openai_compatible(prompt: str, use_response_format: bool) -> str:
     return body["choices"][0]["message"]["content"]
 
 
+def validate_runtime_config(dry_run: bool) -> None:
+    if dry_run:
+        return
+
+    missing = []
+    if not (os.getenv("TEACHER_API_KEY") or os.getenv("OPENAI_API_KEY")):
+        missing.append("TEACHER_API_KEY or OPENAI_API_KEY")
+    if not os.getenv("TEACHER_MODEL"):
+        missing.append("TEACHER_MODEL")
+
+    if missing:
+        raise RuntimeError("Missing required environment variables for real labeling: " + ", ".join(missing))
+
+
 def main() -> None:
     args = parse_args()
+    validate_runtime_config(args.dry_run)
     template = args.prompt_template.read_text(encoding="utf-8")
     records = read_jsonl(args.input)
     if args.max_samples is not None:

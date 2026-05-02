@@ -1,5 +1,23 @@
 # Phase 2 Quality Rubric
 
+## Report Metadata
+
+| Field | Value |
+| --- | --- |
+| Generated | Manual rubric document |
+| Report type | Labeling rubric |
+| Project stage | Teacher label definition |
+| Report status | Reference specification |
+
+## Experiment Context
+
+| Field | Value |
+| --- | --- |
+| Model | Teacher judge and student scorer target |
+| Data version | Applies to teacher-labeled SFT samples |
+| Label space | score 1-5 plus verdict `keep` / `maybe` / `drop` |
+| Current use | Define what labels mean and how teacher judgments should be interpreted |
+
 This rubric defines the teacher-label target for SFT data quality scoring.
 The scorer should judge the quality of an `instruction` and `output` pair as
 training data for supervised fine-tuning.

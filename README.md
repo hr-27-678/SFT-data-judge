@@ -6,9 +6,9 @@ distilling labels from a stronger teacher model.
 
 ## Current Status
 
-Last updated: 2026-05-01
+Last updated: 2026-05-02
 
-The current best baseline is a binary "confident scorer":
+The compact baseline is a binary "confident scorer":
 
 - Base model: `Qwen/Qwen3-4B-Instruct-2507`
 - Fine-tuning: LoRA, 3 epochs, LLaMA-Factory
@@ -29,6 +29,39 @@ Binary scorer metrics:
 This is better than the original 1-5 score scorer for a first useful baseline.
 The model is currently more reliable as a conservative keep-first filter than as
 an automatic drop filter.
+
+A Qwen3-8B v1 capacity check has also been trained on the same binary confident
+dataset. It improves test accuracy and keep recall, but is more keep-biased and
+weaker on valid/not_keep recall, so it is best treated as a v2 candidate rather
+than a full replacement for the current 4B baseline.
+
+The targeted 1,200-example DeepSeek teacher-label batch is now complete with
+1,200/1,200 valid labels. V2 binary scorer data is ready in
+`data/labeled/scorer_binary_sft_v2/`.
+
+The current main candidate is the Qwen3-8B v2 conservative scorer, trained on
+`scorer_binary_v2_conservative`, which maps score 3 to `not_keep`.
+
+| Split | Accuracy | Keep F1 | Not-keep F1 | JSON valid |
+| --- | ---: | ---: | ---: | ---: |
+| Valid | 74.55% | 0.799 | 0.655 | 100% |
+| Test | 79.91% | 0.844 | 0.717 | 100% |
+
+This is the best quality-first candidate so far because the reject boundary is
+healthier than v1 8B. It should still be used for prioritization and review
+routing, not blind automatic deletion.
+
+Prepared but not completed:
+
+- Qwen3-8B v2 confident ablation configs exist under `configs/llamafactory/`.
+- The first v2 confident run was intentionally stopped on 2026-05-02 and should
+  not be treated as a completed experiment.
+
+Recommended next action:
+
+- Build a binary scorer inference script for larger unlabeled JSONL pools, then
+  sample high-confidence keep, high-confidence not_keep, and uncertain cases for
+  review or teacher relabeling.
 
 ## Repository Layout
 
@@ -54,6 +87,12 @@ Most JSONL data and model outputs are generated artifacts and are ignored by
 6. Train and evaluate the original 1-5 scorer.
 7. Convert confident labels into a binary scorer dataset.
 8. Train and evaluate the binary confident scorer.
+9. Add targeted teacher labels for weak and boundary cases.
+10. Build v2 binary scorer datasets with confident and conservative score-3
+    policies.
+11. Train and evaluate the Qwen3-8B v2 conservative scorer.
+12. Next: run the scorer over larger unlabeled pools and use teacher relabeling
+    only where it is most useful.
 
 ## Key Reports
 
@@ -67,8 +106,14 @@ Start here:
 Most useful current reports:
 
 - `reports/scorer_binary_experiment_report.md`
+- `reports/scorer_binary_qwen3_8b_v1_experiment_report.md`
+- `reports/scorer_binary_v2_conservative_qwen3_8b_experiment_report.md`
 - `reports/scorer_binary_eval_valid_report.md`
 - `reports/scorer_binary_eval_test_report.md`
+- `reports/scorer_binary_v2_conservative_eval_valid_report.md`
+- `reports/scorer_binary_v2_conservative_eval_test_report.md`
+- `reports/training_lessons_and_notes.md`
+- `reports/teacher_label_report_targeted_1200.md`
 - `reports/scorer_error_analysis_greedy_report.md`
 - `reports/teacher_label_report_1000.md`
 - `reports/teacher_sampling_starter_1000_report.md`

@@ -1,5 +1,24 @@
 # LLaMA-Factory Startup Notes
 
+## Report Metadata
+
+| Field | Value |
+| --- | --- |
+| Generated | Manual operations note |
+| Report type | Environment / startup note |
+| Project stage | Local training operations |
+| Report status | Reference note |
+
+## Experiment Context
+
+| Field | Value |
+| --- | --- |
+| Model | N/A |
+| Data version | N/A |
+| Tooling | LLaMA-Factory, conda environment `llamafactory` |
+| Script | `scripts/start_llamafactory_webui.ps1` |
+| Current use | Start local LLaMA-Factory WebUI safely on this machine |
+
 Use this note when starting LLaMA-Factory for the SFT-DataJudge scorer training.
 
 ## One-Command Startup

@@ -1,15 +1,32 @@
 # Scorer Eval Report (test)
 
-Generated: 2026-05-01 17:03:39
+## Report Metadata
 
-## Run
+| Field | Value |
+| --- | --- |
+| Generated | 2026-05-01 17:03:39 |
+| Report type | Split evaluation |
+| Project stage | Original 1-5 scorer |
+| Report status | Historical sampling-based test evaluation |
 
+## Experiment Context
+
+| Field | Value |
+| --- | --- |
+| Model | Qwen3-4B LoRA scorer |
+| Data version | `scorer_sft_1000` |
+| Split | test |
+| Evaluation mode | Sampling-based / non-canonical |
+| Run name | `scorer_sft_1000_qwen3_4b_lora_e3` |
+| Label space | score 1-5 plus verdict `keep` / `maybe` / `drop` |
+| Current use | Historical comparison; prefer greedy report for deterministic metrics |
+
+## Run Artifacts
 - Run name: `scorer_sft_1000_qwen3_4b_lora_e3`
 - Predictions: `C:\Users\haoran27\llamafactory_outputs\scorer_sft_1000_qwen3_4b_lora_e3_predict_test\generated_predictions.jsonl`
 - Reference: `scorer_sft_1000_test.jsonl`
 
-## Summary
-
+## Metrics Summary
 | Metric | Value |
 | --- | --- |
 | Records | 104 |
@@ -37,8 +54,7 @@ Generated: 2026-05-01 17:03:39
 | 4 | 14 | 7 |
 | 5 | 55 | 63 |
 
-## Per Source
-
+## Source Breakdown
 | Source | Records | JSON valid | Schema valid | Score exact | Score +/-1 | Verdict acc |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | cot_zh | 42 | 100.00% | 100.00% | 14.29% | 45.24% | 35.71% |
