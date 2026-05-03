@@ -1,6 +1,6 @@
 # Project File Inventory
 
-Last updated: 2026-05-02
+Last updated: 2026-05-03
 
 This file is a GitHub handoff checklist for the current project directory. It
 separates source files, reports, generated data, and local-only artifacts.
@@ -9,8 +9,8 @@ separates source files, reports, generated data, and local-only artifacts.
 
 - `README.md`
   - Main project entrypoint.
-  - Up to date with the compact baseline, current v2 main candidate, and next
-    actions.
+  - Up to date with the compact baseline, both v2 8B candidates, the 3,600-row
+    pilot inference result, and next actions.
 - `PROJECT_PLAN.md`
   - Current plan, status board, completed artifacts, best result, and
     recommended next steps.
@@ -42,15 +42,12 @@ separates source files, reports, generated data, and local-only artifacts.
 - `configs/llamafactory/scorer_binary_v2_conservative_qwen3_8b_lora_predict_test.yaml`
   - LLaMA-Factory greedy test prediction config for the Qwen3-8B v2 scorer.
 - `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_e3.yaml`
-  - Prepared LLaMA-Factory training config for the Qwen3-8B v2 confident
-    ablation. Training was intentionally stopped on 2026-05-02 and is not a
-    completed experiment yet.
+  - LLaMA-Factory training config for the completed Qwen3-8B v2 confident
+    ablation.
 - `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_predict_valid.yaml`
-  - Prepared greedy valid prediction config for the Qwen3-8B v2 confident
-    ablation.
+  - Greedy valid prediction config for the Qwen3-8B v2 confident ablation.
 - `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_predict_test.yaml`
-  - Prepared greedy test prediction config for the Qwen3-8B v2 confident
-    ablation.
+  - Greedy test prediction config for the Qwen3-8B v2 confident ablation.
 - `prompts/teacher_judge_prompt.md`
   - Teacher rubric prompt template.
 
@@ -73,6 +70,7 @@ Current scripts:
 - `scripts/09_build_binary_scorer_sft.py`
 - `scripts/10_evaluate_binary_scorer_predictions.py`
 - `scripts/11_build_targeted_teacher_batch.py`
+- `scripts/12_infer_binary_scorer.py`
 - `scripts/start_llamafactory_webui.ps1`
 - `scripts/README.md`
 
@@ -98,6 +96,12 @@ Canonical current reports:
 - `reports/scorer_binary_v2_conservative_qwen3_8b_experiment_report.md`
 - `reports/scorer_binary_v2_conservative_eval_valid_report.md`
 - `reports/scorer_binary_v2_conservative_eval_test_report.md`
+- `reports/scorer_binary_v2_confident_qwen3_8b_experiment_report.md`
+- `reports/scorer_binary_v2_confident_eval_valid_report.md`
+- `reports/scorer_binary_v2_confident_eval_test_report.md`
+- `reports/teacher_candidates_all_v2_model_agreement_report.md`
+- `reports/teacher_candidates_all_v2_conservative_inference_report.md`
+- `reports/teacher_candidates_all_v2_confident_inference_report.md`
 - `reports/training_lessons_and_notes.md`
 - `reports/teacher_sampling_targeted_1200_report.md`
 - `reports/teacher_label_report_targeted_1200.md`
@@ -125,6 +129,8 @@ These directories contain generated artifacts and are mostly ignored by
   - Teacher prompts and teacher labels.
   - JSONL files should not be committed unless the repository is private and
     the data-sharing policy is clear.
+  - Current dry-run prompt file:
+    `v2_pilot_top919/v2_pilot_top919_teacher_prompts.jsonl`.
 - `data/labeled/scorer_sft/`
   - Original 1-5 scorer SFT JSONL files.
   - `dataset_info.json` and `scorer_sft_report.md` are useful metadata.
@@ -142,8 +148,20 @@ These directories contain generated artifacts and are mostly ignored by
   - Optional to commit. The markdown reports already summarize the important
     metrics.
   - Current v2 metrics:
-    `scorer_binary_v2_conservative_eval_valid_metrics.json` and
-    `scorer_binary_v2_conservative_eval_test_metrics.json`.
+    `scorer_binary_v2_conservative_eval_valid_metrics.json`,
+    `scorer_binary_v2_conservative_eval_test_metrics.json`,
+    `scorer_binary_v2_confident_eval_valid_metrics.json`, and
+    `scorer_binary_v2_confident_eval_test_metrics.json`.
+- `data/scored/`
+  - Batch scorer inference outputs for unlabeled or teacher-candidate pools.
+  - Current important local pilot artifacts:
+    `teacher_candidates_all_v2_model_agreement_metrics.json`,
+    `teacher_candidates_all_v2_model_disagreements.jsonl`, and
+    `teacher_candidates_all_v2_teacher_review_priority.jsonl`.
+  - First teacher-labeling subset:
+    `teacher_candidates_all_v2_teacher_review_top919.jsonl`.
+  - Large prediction JSONL files are generated artifacts and should normally
+    stay local.
 
 ## Local-Only Model Artifacts
 
@@ -154,8 +172,7 @@ LLaMA-Factory outputs are outside this repository and should stay local:
 - `C:\Users\haoran27\llamafactory_outputs\scorer_binary_confident_1000_qwen3_8b_lora_e3`
 - `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v2_conservative_qwen3_8b_lora_e3`
 - `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v2_confident_qwen3_8b_lora_e3`
-  - Partial/incomplete local output from an intentionally stopped run on
-    2026-05-02. Overwrite or clean before restarting the ablation.
+  - Completed Qwen3-8B v2 confident ablation from 2026-05-03.
 
 Do not commit model checkpoints, adapter weights, Hugging Face caches, or
 training logs unless there is a specific release plan.

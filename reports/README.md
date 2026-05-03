@@ -18,7 +18,7 @@
 | Current use | Identify canonical, historical, and incomplete reports |
 | Start here after | `PROJECT_PLAN.md`, `PROJECT_FILE_INVENTORY.md` |
 
-Last updated: 2026-05-02
+Last updated: 2026-05-03
 
 This folder contains both canonical reports and historical diagnostic reports.
 Use this index to avoid confusing older experiments with the current baseline.
@@ -72,6 +72,24 @@ Common metric sections use similar names where possible:
   - Valid-set evaluation for the Qwen3-8B v2 conservative scorer.
 - `scorer_binary_v2_conservative_eval_test_report.md`
   - Test-set evaluation for the Qwen3-8B v2 conservative scorer.
+- `scorer_binary_v2_confident_qwen3_8b_experiment_report.md`
+  - Qwen3-8B v2 confident ablation after adding the targeted 1,200 teacher
+    labels.
+  - Current high-confidence keep companion candidate.
+- `scorer_binary_v2_confident_eval_valid_report.md`
+  - Valid-set evaluation for the Qwen3-8B v2 confident scorer.
+- `scorer_binary_v2_confident_eval_test_report.md`
+  - Test-set evaluation for the Qwen3-8B v2 confident scorer.
+- `teacher_candidates_all_v2_model_agreement_report.md`
+  - Conservative/confident Qwen3-8B v2 agreement analysis on the 3,600-row
+    teacher-candidate pilot pool.
+  - Current active-learning guide for the next teacher-labeling step.
+- `teacher_candidates_all_v2_conservative_inference_report.md`
+  - Batch inference summary for the v2 conservative scorer on the 3,600-row
+    teacher-candidate pool.
+- `teacher_candidates_all_v2_confident_inference_report.md`
+  - Batch inference summary for the v2 confident scorer on the 3,600-row
+    teacher-candidate pool.
 - `scorer_error_analysis_greedy_report.md`
   - Error analysis for the original 1-5 scorer using greedy predictions.
   - Useful for understanding why the binary simplification was needed.
@@ -80,14 +98,6 @@ Common metric sections use similar names where possible:
     evaluation logic, and practical lessons from the scorer experiments.
   - Includes early-stop/checkpoint guidance and training tricks used or worth
     trying.
-
-## Prepared But Not Completed
-
-- Qwen3-8B v2 confident ablation
-  - Configs exist in `configs/llamafactory/`.
-  - The 2026-05-02 run was intentionally stopped before completion.
-  - No valid/test report exists yet, and any partial local output should not be
-    treated as a finished experiment.
 
 ## Teacher Data Reports
 

@@ -6,7 +6,7 @@ distilling labels from a stronger teacher model.
 
 ## Current Status
 
-Last updated: 2026-05-02
+Last updated: 2026-05-03
 
 The compact baseline is a binary "confident scorer":
 
@@ -51,17 +51,37 @@ This is the best quality-first candidate so far because the reject boundary is
 healthier than v1 8B. It should still be used for prioritization and review
 routing, not blind automatic deletion.
 
-Prepared but not completed:
+The Qwen3-8B v2 confident ablation has also been trained and evaluated on
+`scorer_binary_v2_confident`, which skips score 3. It is better as a
+high-confidence keep filter, but weaker as a reject model:
 
-- Qwen3-8B v2 confident ablation configs exist under `configs/llamafactory/`.
-- The first v2 confident run was intentionally stopped on 2026-05-02 and should
-  not be treated as a completed experiment.
+| Split | Accuracy | Keep F1 | Not-keep F1 | JSON valid |
+| --- | ---: | ---: | ---: | ---: |
+| Valid | 76.14% | 0.832 | 0.591 | 100% |
+| Test | 82.41% | 0.879 | 0.679 | 100% |
+
+Recommended use:
+
+- v2 confident: high-confidence keep prioritization.
+- v2 conservative: review routing and quality-first not_keep surfacing.
+- Disagreements between the two 8B v2 models are good teacher-relabeling
+  candidates.
+
+Both Qwen3-8B v2 adapters have now been run on the 3,600-row
+`teacher_candidates_all` pilot pool. They agree on 3,327 / 3,600 records
+(92.42%), with 273 model disagreements and 646 both-not-keep records. The
+priority teacher-review queue is in
+`data/scored/teacher_candidates_all_v2_teacher_review_priority.jsonl`; the
+first 919-record teacher batch is
+`data/scored/teacher_candidates_all_v2_teacher_review_top919.jsonl`, with
+dry-run prompts rendered at
+`data/labeled/teacher_judge/v2_pilot_top919/v2_pilot_top919_teacher_prompts.jsonl`.
 
 Recommended next action:
 
-- Build a binary scorer inference script for larger unlabeled JSONL pools, then
-  sample high-confidence keep, high-confidence not_keep, and uncertain cases for
-  review or teacher relabeling.
+- Send the pilot priority queue to the teacher model before running 4B v2 or
+  full 188k inference. Start with the 273 disagreements plus the 646
+  both-not-keep records.
 
 ## Repository Layout
 
@@ -91,8 +111,10 @@ Most JSONL data and model outputs are generated artifacts and are ignored by
 10. Build v2 binary scorer datasets with confident and conservative score-3
     policies.
 11. Train and evaluate the Qwen3-8B v2 conservative scorer.
-12. Next: run the scorer over larger unlabeled pools and use teacher relabeling
-    only where it is most useful.
+12. Train and evaluate the Qwen3-8B v2 confident ablation.
+13. Run both Qwen3-8B v2 scorers over the 3,600-row teacher-candidate pilot.
+14. Next: label the priority review queue with the teacher model and retrain
+    from teacher-confirmed hard cases.
 
 ## Key Reports
 
@@ -108,10 +130,16 @@ Most useful current reports:
 - `reports/scorer_binary_experiment_report.md`
 - `reports/scorer_binary_qwen3_8b_v1_experiment_report.md`
 - `reports/scorer_binary_v2_conservative_qwen3_8b_experiment_report.md`
+- `reports/scorer_binary_v2_confident_qwen3_8b_experiment_report.md`
 - `reports/scorer_binary_eval_valid_report.md`
 - `reports/scorer_binary_eval_test_report.md`
 - `reports/scorer_binary_v2_conservative_eval_valid_report.md`
 - `reports/scorer_binary_v2_conservative_eval_test_report.md`
+- `reports/scorer_binary_v2_confident_eval_valid_report.md`
+- `reports/scorer_binary_v2_confident_eval_test_report.md`
+- `reports/teacher_candidates_all_v2_model_agreement_report.md`
+- `reports/teacher_candidates_all_v2_conservative_inference_report.md`
+- `reports/teacher_candidates_all_v2_confident_inference_report.md`
 - `reports/training_lessons_and_notes.md`
 - `reports/teacher_label_report_targeted_1200.md`
 - `reports/scorer_error_analysis_greedy_report.md`

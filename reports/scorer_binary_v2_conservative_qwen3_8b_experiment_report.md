@@ -180,10 +180,11 @@ Do not yet use it as an irreversible auto-dropper. A practical policy is:
 - predicted not_keep -> review, teacher relabel, or soft filtering
 - uncertain/contradictory cases -> send to the teacher model
 
-Next useful experiment:
+Next useful work:
 
-1. Train Qwen3-8B on `scorer_binary_v2_confident` as an ablation.
-2. Compare whether skipping score 3 gives better keep precision without losing
-   too much rejection strength.
-3. Add an inference script for unlabeled JSONL pools with resume support and
-   source-wise summary reporting.
+1. Use both completed Qwen3-8B v2 adapters on the same larger unlabeled JSONL
+   pool.
+2. Compare whether skipping score 3 gives better high-confidence keep
+   prioritization while conservative remains better for rejection routing.
+3. Use conservative/confident disagreements to sample targeted teacher
+   relabeling examples.

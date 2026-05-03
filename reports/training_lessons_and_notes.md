@@ -192,6 +192,38 @@ score 3 放进 `not_keep`：
 - 适合做优先级排序、review routing、teacher relabeling 采样。
 - 仍不适合盲目自动删除。
 
+### Qwen3-8B v2 confident
+
+跳过 score 3 后，模型更适合做 high-confidence keep filter，但拒绝边界弱于 conservative。
+
+指标：
+
+| Split | Accuracy | Keep F1 | Not-keep F1 |
+| --- | ---: | ---: | ---: |
+| Valid | 76.14% | 0.832 | 0.591 |
+| Test | 82.41% | 0.879 | 0.679 |
+
+训练观察：
+
+- 总步数：297
+- 最优 checkpoint：`checkpoint-150`
+- best valid eval loss：`0.050177909433841705`
+- 训练总时长约 30 分钟
+- JSON/schema 仍是 100% 有效
+
+和 v2 conservative 对比：
+
+- test accuracy 更高：82.41% vs 79.91%。
+- test keep F1 更高：0.879 vs 0.844。
+- test not_keep F1 更低：0.679 vs 0.717。
+- test not_keep recall 更低：57.81% vs 64.04%。
+
+结论：
+
+- confident 适合挑选更确定的 keep 样本。
+- conservative 仍然更适合 review routing 和找可疑样本。
+- 两个模型意见不一致的样本，比继续盲目训练更值得发给 teacher。
+
 ## 5. 模型大小的经验
 
 Qwen3-8B 不是无脑优于 Qwen3-4B。
@@ -213,6 +245,8 @@ Qwen3-8B 不是无脑优于 Qwen3-4B。
 - 4B 保留为 compact baseline。
 - 8B 作为主力候选，但必须配合 targeted negatives 和 conservative policy。
 - 模型升级本身不是答案，数据分布和标签定义更重要。
+- 现在暂时不优先跑 4B v2 confident/conservative。除非需要部署低成本模型，
+  否则下一步更应该先用两个 8B v2 模型挖 hard cases，再决定是否训练 4B v2。
 
 ## 6. LoRA 训练设置心得
 
@@ -449,6 +483,25 @@ Set-Location -LiteralPath "\\ad.uillinois.edu\engr-ews\haoran27\微调\SFT-DataJ
 
 PowerShell 输出里有时会把 `微调` 显示成乱码，但文件实际可以正常读写。判断是否真的有问题，要看脚本是否能读取数据，而不是只看终端显示。
 
+### 后台日志编码
+
+Windows 后台训练如果把 stdout/stderr 重定向到文件，默认编码可能不是 UTF-8。
+v2 confident 8B 重跑时，LLaMA-Factory 打印中文 training example 曾经触发：
+
+```text
+UnicodeEncodeError: 'charmap' codec can't encode character
+```
+
+稳定做法是在启动训练/预测前设置：
+
+```powershell
+$env:PYTHONIOENCODING='utf-8'
+$env:PYTHONUTF8='1'
+[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new()
+```
+
+这不是数据问题，也不是显存问题；只是 Windows 控制台编码和中文样本不匹配。
+
 ### 后台训练
 
 长时间训练适合后台启动并写日志，但要记录清楚：
@@ -594,25 +647,24 @@ LLaMA-Factory 会输出 BLEU/ROUGE，但这个任务不该用它们判断好坏�
 
 ### v2 confident 8B ablation
 
-目标：
+已经完成。当前结论：
 
-- 看跳过 score 3 后，keep precision 是否明显回升。
-- 看 not_keep F1 是否比 conservative 下降。
+- 跳过 score 3 后，keep 侧指标明显更好。
+- not_keep F1 和 not_keep recall 低于 conservative。
+- 它不是 conservative 的替代品，更适合作为 companion model。
 
 判断：
 
 - 如果 confident keep precision 高很多，可以用它做 high-confidence keep filter。
 - 如果 conservative not_keep 更强，可以用它做 review routing。
 - 两者不一定非要二选一。
+- 实际下一步应该看两个模型在未标注大池子上的分歧，而不是只看 held-out 指标。
 
-注意：
+### 推理脚本和 3,600 条 pilot
 
-- 2026-05-02 已创建 v2 confident 8B 的 LLaMA-Factory configs。
-- 当天训练被主动暂停，不能把本地 partial output 当成完成实验。
-
-### 推理脚本
-
-比继续盲目训练更值得做。
+比继续盲目训练更值得做。`scripts/12_infer_binary_scorer.py` 已经实现，
+并且已经用两个 8B v2 adapter 跑完了
+`data/splits/teacher_judge/teacher_candidates_all.jsonl` 这 3,600 条 pilot。
 
 目标：
 
@@ -622,7 +674,25 @@ LLaMA-Factory 会输出 BLEU/ROUGE，但这个任务不该用它们判断好坏�
 - 按 source、长度、rule flag 聚合。
 - 抽样 high-confidence keep / not_keep / uncertain。
 
-这样可以知道模型真实部署时会怎么筛数据。
+这样可以知道模型真实部署时会怎么筛数据。当前 3,600 条 pilot 的四桶结果：
+
+- confident keep + conservative keep
+  - 2,681
+- confident keep + conservative not_keep
+  - 272
+- confident not_keep + conservative keep
+  - 1
+- confident not_keep + conservative not_keep
+  - 646
+
+结论：
+
+- 两个 8B v2 scorer 一致率是 92.42%，说明不是完全乱打架。
+- 273 条 disagreement 是最紧凑的边界样本池。
+- 646 条 both-not-keep 是最值得 teacher 确认的 hard negative 候选。
+- 不建议马上跑全量 188,103 条，也不建议马上训练 4B v2。
+- 先把 pilot priority queue 交给 teacher label，拿回 teacher labels 后再决定
+  v3 数据怎么配。
 
 ### teacher relabeling loop
 
@@ -635,6 +705,17 @@ LLaMA-Factory 会输出 BLEU/ROUGE，但这个任务不该用它们判断好坏�
 - predicted not_keep 高置信样本。
 - predicted keep 但 rule flags 异常的样本。
 - conservative/confident 两个模型分歧的样本。
+
+这个 loop 不等于 self-training。关键区别是：
+
+- student 只负责选题，不负责给最终标签。
+- teacher label 才进入训练集。
+- valid/test 不动。
+- retrain 时混合旧数据、teacher-confirmed hard cases、正常 keep 样本，
+  不要只用模型挖出来的 negative。
+
+这样做不会天然导致过拟合；真正的风险是采样分布变窄，所以需要 source-wise
+balance、dedupe、固定 held-out 对比和少量正常样本校准。
 
 ## 14. 当前实践原则
 

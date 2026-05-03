@@ -1,6 +1,6 @@
 # Project Plan
 
-Last updated: 2026-05-02
+Last updated: 2026-05-03
 
 ## Resume Here
 
@@ -21,8 +21,10 @@ Recommended reading order for a fresh session:
 4. `scripts/README.md`
 5. `reports/scorer_binary_experiment_report.md`
 6. `reports/scorer_binary_v2_conservative_qwen3_8b_experiment_report.md`
-7. `reports/training_lessons_and_notes.md`
-8. `reports/teacher_sampling_targeted_1200_report.md`
+7. `reports/scorer_binary_v2_confident_qwen3_8b_experiment_report.md`
+8. `reports/teacher_candidates_all_v2_model_agreement_report.md`
+9. `reports/training_lessons_and_notes.md`
+10. `reports/teacher_sampling_targeted_1200_report.md`
 
 The school computer does not preserve conversation progress, so this file should
 be treated as the project memory.
@@ -47,6 +49,12 @@ The project has completed one full starter loop:
 13. trained and evaluated the Qwen3-8B v2 conservative scorer
 14. standardized all markdown reports under `reports/` with consistent
     metadata/context headers and common section names
+15. implemented `scripts/12_infer_binary_scorer.py` for batch scorer inference
+    on unlabeled JSONL pools with resume support and summary reporting
+16. trained and evaluated the Qwen3-8B v2 confident ablation
+17. ran both Qwen3-8B v2 scorers on the 3,600-row teacher-candidate pool and
+    built a conservative/confident agreement report plus a teacher-review
+    priority queue
 
 The current best direction is the binary scorer family, not the original 1-5
 scorer.
@@ -56,9 +64,15 @@ Four initial API/parse failures were retried, then merged into the canonical
 `data/labeled/teacher_judge/targeted_1200_teacher_labels.jsonl`, giving
 1,200/1,200 valid teacher labels.
 
-Also on 2026-05-02, Qwen3-8B v2 confident configs were created, but the run was
-intentionally stopped before completion. Do not treat any local partial output
-for `scorer_binary_v2_confident_qwen3_8b_lora_e3` as a completed experiment.
+On 2026-05-03, the Qwen3-8B v2 confident ablation was restarted from scratch
+with `overwrite_output_dir: true`, trained successfully, and evaluated on
+valid/test with greedy decoding. Treat the current local adapter as complete.
+
+On 2026-05-03, both Qwen3-8B v2 scorers were run on
+`data/splits/teacher_judge/teacher_candidates_all.jsonl` (3,600 records).
+They agreed on 3,327 / 3,600 records (92.42%) and disagreed on 273 records.
+The strongest teacher-labeling queue is the 273 disagreements plus the 646
+both-not-keep records, before expanding to the full 188,103-row processed pool.
 
 ## Status Board
 
@@ -72,17 +86,19 @@ Completed and usable:
   - `scorer_binary_v2_conservative`
 - Qwen3-8B v2 conservative training, valid/test prediction, evaluation, and
   experiment report.
+- Qwen3-8B v2 confident training, valid/test prediction, evaluation, and
+  experiment report.
+- Batch inference script:
+  `scripts/12_infer_binary_scorer.py`
+- 3,600-row teacher-candidate pilot inference with both Qwen3-8B v2 adapters:
+  - `reports/teacher_candidates_all_v2_conservative_inference_report.md`
+  - `reports/teacher_candidates_all_v2_confident_inference_report.md`
+  - `reports/teacher_candidates_all_v2_model_agreement_report.md`
+  - `data/scored/teacher_candidates_all_v2_teacher_review_priority.jsonl`
+  - `data/scored/teacher_candidates_all_v2_teacher_review_top919.jsonl`
+  - `data/labeled/teacher_judge/v2_pilot_top919/v2_pilot_top919_teacher_prompts.jsonl`
 - Training lessons note:
   `reports/training_lessons_and_notes.md`
-
-Prepared but not completed:
-
-- Qwen3-8B v2 confident ablation configs:
-  - `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_e3.yaml`
-  - `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_predict_valid.yaml`
-  - `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_predict_test.yaml`
-- The first attempted run was intentionally stopped on 2026-05-02. Restart it
-  from scratch with `overwrite_output_dir: true` if this ablation is needed.
 
 Current main candidate:
 
@@ -92,13 +108,21 @@ Current main candidate:
 - Use it for prioritization, review routing, and selecting teacher relabeling
   candidates. Do not use it for blind automatic deletion.
 
+Current companion candidate:
+
+- `Qwen/Qwen3-8B` LoRA on `scorer_binary_v2_confident`
+- Local adapter:
+  `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v2_confident_qwen3_8b_lora_e3`
+- Use it as a high-confidence keep filter and as a contrast model against v2
+  conservative. Disagreements between the two v2 8B models are useful
+  teacher-relabeling candidates.
+
 Best next action:
 
-- Prefer building a scorer inference script for larger unlabeled JSONL pools
-  before doing more training. This will show how the current v2 conservative
-  model behaves on realistic candidate data.
-- If the next goal is a controlled ablation instead, run the prepared Qwen3-8B
-  v2 confident experiment from scratch and compare it against v2 conservative.
+- Send the 3,600-row pilot priority queue to the teacher model first, starting
+  with model disagreements and both-not-keep records. Do not spend the next
+  run on 4B v2 or full 188k inference until this teacher-labeled pilot tells
+  us which scorer errors are real.
 
 ## Goal
 
@@ -120,7 +144,10 @@ prioritize future SFT data at lower cost.
 9. Add targeted teacher labels for known weak/boundary areas.
 10. Build v2 binary datasets with both confident and conservative score-3
     policies.
-11. Train and evaluate Qwen3-8B v2 conservative as the current main candidate.
+11. Train and evaluate Qwen3-8B v2 conservative as the current quality-first
+    candidate.
+12. Train and evaluate Qwen3-8B v2 confident as the high-confidence keep
+    ablation.
 
 ## Data Sources
 
@@ -190,12 +217,29 @@ Qwen3-8B v2 conservative artifacts:
 - `data/eval/scorer_binary_v2_conservative_eval_valid_metrics.json`
 - `data/eval/scorer_binary_v2_conservative_eval_test_metrics.json`
 
-Qwen3-8B v2 confident prepared artifacts:
+Qwen3-8B v2 confident artifacts:
 
 - `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_e3.yaml`
 - `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_predict_valid.yaml`
 - `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_predict_test.yaml`
-- Status: config-only / interrupted partial local run, not evaluated.
+- `reports/scorer_binary_v2_confident_qwen3_8b_experiment_report.md`
+- `reports/scorer_binary_v2_confident_eval_valid_report.md`
+- `reports/scorer_binary_v2_confident_eval_test_report.md`
+- `data/eval/scorer_binary_v2_confident_eval_valid_metrics.json`
+- `data/eval/scorer_binary_v2_confident_eval_test_metrics.json`
+
+Teacher-candidate v2 inference artifacts:
+
+- `reports/teacher_candidates_all_v2_conservative_inference_report.md`
+- `reports/teacher_candidates_all_v2_confident_inference_report.md`
+- `reports/teacher_candidates_all_v2_model_agreement_report.md`
+- `data/scored/teacher_candidates_all_v2_conservative_predictions.jsonl`
+- `data/scored/teacher_candidates_all_v2_confident_predictions.jsonl`
+- `data/scored/teacher_candidates_all_v2_model_agreement_metrics.json`
+- `data/scored/teacher_candidates_all_v2_model_disagreements.jsonl`
+- `data/scored/teacher_candidates_all_v2_teacher_review_priority.jsonl`
+- `data/scored/teacher_candidates_all_v2_teacher_review_top919.jsonl`
+- `data/labeled/teacher_judge/v2_pilot_top919/v2_pilot_top919_teacher_prompts.jsonl`
 
 Learning and handoff notes:
 
@@ -253,6 +297,23 @@ Interpretation:
 - Do not use it for blind automatic deletion yet; use it for prioritization,
   review routing, and selecting examples for teacher relabeling.
 
+Qwen3-8B v2 confident result:
+
+| Split | Accuracy | Keep F1 | Not-keep F1 | JSON valid |
+| --- | ---: | ---: | ---: | ---: |
+| Valid | 76.14% | 0.832 | 0.591 | 100% |
+| Test | 82.41% | 0.879 | 0.679 | 100% |
+
+Interpretation:
+
+- This is the best current high-confidence keep candidate because test
+  accuracy and keep F1 are higher than v2 conservative.
+- It is more keep-biased than v2 conservative: test predictions were
+  154 keep / 45 not_keep, and test `not_keep` recall was 57.81%.
+- It should not replace v2 conservative for reject routing. Use the two
+  together: confident for keep prioritization, conservative for surfacing
+  questionable examples, and disagreements for teacher relabeling.
+
 Training notes:
 
 - `reports/training_lessons_and_notes.md` summarizes the practical training
@@ -281,13 +342,34 @@ paths are:
   `C:\Users\haoran27\llamafactory_outputs\scorer_binary_confident_1000_qwen3_8b_lora_e3`
 - Qwen3-8B binary conservative v2:
   `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v2_conservative_qwen3_8b_lora_e3`
-- Qwen3-8B binary confident v2 partial/incomplete run:
+- Qwen3-8B binary confident v2:
   `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v2_confident_qwen3_8b_lora_e3`
-  This should be overwritten or cleaned before restarting the ablation.
 
 Use the binary setup for future scorer experiments. The 4B adapter is the
 compact baseline, while the v2 conservative 8B adapter is the current main
-quality-first candidate.
+quality-first candidate and the v2 confident 8B adapter is the companion
+high-confidence keep candidate.
+
+3,600-row teacher-candidate pilot result:
+
+| Bucket | Count |
+| --- | ---: |
+| confident keep + conservative keep | 2,681 |
+| confident keep + conservative not_keep | 272 |
+| confident not_keep + conservative keep | 1 |
+| confident not_keep + conservative not_keep | 646 |
+
+Interpretation:
+
+- The two Qwen3-8B v2 scorers agree on 92.42% of the teacher-candidate pilot.
+- The 273 disagreements are compact boundary cases for teacher relabeling.
+- The 646 both-not-keep examples are the strongest hard-negative candidates.
+- The priority review queue has 1,215 records after adding clean-not_keep and
+  flagged-but-kept cases.
+- The first teacher-labeling file is
+  `data/scored/teacher_candidates_all_v2_teacher_review_top919.jsonl`.
+- A dry-run prompt file for the first batch has been rendered at
+  `data/labeled/teacher_judge/v2_pilot_top919/v2_pilot_top919_teacher_prompts.jsonl`.
 
 ## Why the Binary Task Exists
 
@@ -304,52 +386,33 @@ question: "Is this clearly useful training data or clearly not?"
 
 Recommended next work:
 
-1. Build an inference script that applies the v2 conservative binary scorer to
-   unlabeled candidate JSONL files with resume support.
-2. Run the v2 conservative binary scorer on a larger unlabeled candidate pool.
-3. Sample three buckets for inspection:
+1. Send the 3,600-row pilot priority queue to the teacher model.
+2. Label the 273 model-disagreement cases and 646 both-not-keep cases first.
+3. Keep a small calibration sample from three buckets:
    - high-confidence keep
    - high-confidence not_keep
-   - uncertain or conflicting examples
+   - conservative/confident disagreement examples
 4. Use the teacher model only on uncertain or high-impact examples.
-5. Optionally train Qwen3-8B on `scorer_binary_v2_confident` for comparison.
-6. Keep Qwen3-4B as the compact
-   comparison baseline if time permits.
-7. Add more negative examples, especially from `cot_zh` and `finetome`.
-8. Retrain binary scorer on the expanded confident dataset.
-9. Only after the binary scorer is stable, consider adding a second-stage
+5. Add more negative examples, especially from `cot_zh` and `finetome`.
+6. Retrain binary scorer on the expanded confident/conservative datasets.
+7. Keep Qwen3-4B as the compact comparison baseline, but do not prioritize
+   v2 4B training until the 8B models have been used to mine hard cases.
+8. Only after the binary scorer is stable, consider adding a second-stage
    severity score or a calibrated confidence score.
 
 Concrete next implementation plan:
 
-1. Implement `scripts/12_infer_binary_scorer.py` or equivalent.
-   Desired behavior:
-   - input JSONL candidate pool
-   - output JSONL predictions
-   - resume by sample id or line count
-   - deterministic greedy generation
-   - source/label-count summary
-2. Run it on the remaining teacher-candidate pool or a larger clean processed
-   pool.
-3. Build an analysis report with:
-   - predicted keep/not_keep counts
-   - source-wise distribution
-   - high-confidence examples
-   - likely false positives and false negatives
-4. Pick a small review set for teacher relabeling:
-   - uncertain cases
-   - confident `not_keep` cases from weak sources
-   - examples where rule flags and model prediction disagree
-5. Use the new teacher labels to expand the binary confident/conservative
-   training set.
-6. Train Qwen3-8B on `scorer_binary_v2_confident` as an ablation, if we want to
-   know whether skipping score 3 improves keep precision enough to matter.
-   Configs already exist, but the 2026-05-02 run was intentionally stopped
-   before completion and should not be treated as a finished experiment.
-7. Compare against:
+1. Convert `data/scored/teacher_candidates_all_v2_teacher_review_priority.jsonl`
+   into teacher prompts. This has been done for the first 919 records.
+2. Run the teacher model on the priority queue, starting with the 919 records
+   from model disagreements plus both-not-keep.
+3. Analyze teacher labels by source, rule flags, and agreement bucket.
+4. Use the new teacher labels to expand both v2 policies and retrain.
+5. Compare the retrained scorer against:
    - Qwen3-4B v1 binary confident
    - Qwen3-8B v1 binary confident
    - Qwen3-8B v2 conservative
+   - Qwen3-8B v2 confident
 
 Avoid spending much more effort on the 1-5 score setup until the binary filter
 is more stable. The 1-5 scorer is useful as an error-analysis reference, but it

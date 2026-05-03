@@ -45,6 +45,11 @@ Run scripts from the repository root unless a script says otherwise.
   - Produces error-analysis reports for the original 1-5 scorer.
 - `10_evaluate_binary_scorer_predictions.py`
   - Evaluates binary scorer predictions and writes markdown reports.
+- `12_infer_binary_scorer.py`
+  - Runs a trained binary scorer adapter on unlabeled candidate JSONL pools.
+  - Uses the same prompt as `09_build_binary_scorer_sft.py`.
+  - Supports resume-by-id, deterministic greedy generation, prompt-only dry runs,
+    scored JSONL output, and source/rule-disagreement summary reports.
 
 ## Local Utilities
 

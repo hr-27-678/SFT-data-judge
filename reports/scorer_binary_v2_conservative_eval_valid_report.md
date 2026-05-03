@@ -72,4 +72,4 @@
 
 1. Inspect `cot_zh` false positives and false negatives before adding more random data.
 2. Use larger-pool inference to identify hard negatives and uncertain examples.
-3. Compare against the prepared v2 confident ablation if keep precision becomes the priority.
+3. Compare against the completed v2 confident ablation if keep precision becomes the priority.
