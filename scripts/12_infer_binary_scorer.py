@@ -23,8 +23,8 @@ DEFAULT_OUTPUT = PROJECT_ROOT / "data" / "scored" / "binary_scorer_predictions.j
 DEFAULT_REPORT = PROJECT_ROOT / "reports" / "binary_scorer_inference_report.md"
 DEFAULT_METRICS = PROJECT_ROOT / "data" / "scored" / "binary_scorer_inference_metrics.json"
 DEFAULT_MODEL = "Qwen/Qwen3-8B"
-DEFAULT_ADAPTER = Path(r"C:\Users\haoran27\llamafactory_outputs\scorer_binary_v2_conservative_qwen3_8b_lora_e3")
-DEFAULT_RUN_NAME = "scorer_binary_v2_conservative_qwen3_8b_lora_e3"
+DEFAULT_ADAPTER = Path(r"C:\Users\haoran27\llamafactory_outputs\scorer_binary_v3_conservative_qwen3_8b_lora_e3")
+DEFAULT_RUN_NAME = "scorer_binary_v3_conservative_qwen3_8b_lora_e3"
 VERDICTS = ["keep", "not_keep"]
 
 BINARY_SYSTEM = (

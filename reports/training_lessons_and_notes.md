@@ -4,7 +4,7 @@
 
 | Field | Value |
 | --- | --- |
-| Generated | 2026-05-02 |
+| Generated | 2026-05-02, refreshed 2026-05-05 |
 | Report type | Training notes / lessons learned |
 | Project stage | Cross-experiment learning |
 | Report status | Living reference note |
@@ -14,8 +14,8 @@
 | Field | Value |
 | --- | --- |
 | Model | Qwen3-4B and Qwen3-8B scorer experiments |
-| Data version | v1 binary, v2 conservative, original 1-5 scorer |
-| Current use | Explain training tricks, early stopping, observed behavior, and next learning experiments |
+| Data version | v1 binary, v2 conservative/confident, v3 data ready, original 1-5 scorer |
+| Current use | Explain training tricks, early stopping, observed behavior, v3 training readiness, and next learning experiments |
 
 这份笔记把目前项目里已经踩过的坑、有效的训练设置、观察到的模型现象、以及后续实验判断方式整理到一起。它不是某一次实验报告，而是给后面继续学习和迭代用的总笔记。
 
@@ -690,9 +690,37 @@ LLaMA-Factory 会输出 BLEU/ROUGE，但这个任务不该用它们判断好坏�
 - 两个 8B v2 scorer 一致率是 92.42%，说明不是完全乱打架。
 - 273 条 disagreement 是最紧凑的边界样本池。
 - 646 条 both-not-keep 是最值得 teacher 确认的 hard negative 候选。
-- 不建议马上跑全量 188,103 条，也不建议马上训练 4B v2。
-- 先把 pilot priority queue 交给 teacher label，拿回 teacher labels 后再决定
-  v3 数据怎么配。
+- 这一步已经完成：pilot priority queue 先 dedupe，再生成 `v2active001`，
+  最后由 teacher label 回填。
+- 现在已经不用再纠结 v3 数据怎么配；v3 数据已经生成，下一步是训练。
+
+### v3 数据和下一轮训练
+
+v3 已经把 starter、targeted 1200、`v2active001` 三批 teacher labels 合并成
+新的二分类 scorer 数据。
+
+当前可训练数据：
+
+| Dataset | Records | Train | Valid | Test | Keep | Not_keep | Score 3 policy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `scorer_binary_v3_conservative` | 2,588 | 2,057 | 267 | 264 | 1,438 | 1,150 | score 3 -> `not_keep` |
+| `scorer_binary_v3_confident` | 2,326 | 1,855 | 234 | 237 | 1,438 | 888 | score 3 skipped |
+
+当前判断已经更新：
+
+- `scorer_binary_v3_conservative` 和 `scorer_binary_v3_confident` 都已经训练并
+  跑完 greedy valid/test evaluation。
+- v3 conservative test：accuracy 76.89%，keep F1 0.796，not_keep F1 0.734，
+  not_keep recall 77.06%。
+- v3 confident test：accuracy 78.90%，keep F1 0.851，not_keep F1 0.638，
+  not_keep recall 53.66%。
+- 所以当前主线应该换成 v3 conservative：它是更好的 quality-first / review
+  routing 模型。
+- v3 confident 仍然是 companion：它 keep recall 高，但 not_keep recall 不够，
+  不适合替代 conservative 做 reject model。
+- 下一步不是继续盲训，而是用两个 v3 scorer 跑更大的 unlabeled pool，
+  再从 disagreement、predicted not_keep、rule/model conflict、`cot_zh` 弱点里
+  选下一批 teacher labels。
 
 ### teacher relabeling loop
 

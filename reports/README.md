@@ -18,7 +18,7 @@
 | Current use | Identify canonical, historical, and incomplete reports |
 | Start here after | `PROJECT_PLAN.md`, `PROJECT_FILE_INVENTORY.md` |
 
-Last updated: 2026-05-03
+Last updated: 2026-05-05
 
 This folder contains both canonical reports and historical diagnostic reports.
 Use this index to avoid confusing older experiments with the current baseline.
@@ -90,6 +90,11 @@ Common metric sections use similar names where possible:
 - `teacher_candidates_all_v2_confident_inference_report.md`
   - Batch inference summary for the v2 confident scorer on the 3,600-row
     teacher-candidate pool.
+- `teacher_candidates_all_v2_priority_teacher_analysis_report.md`
+  - Teacher-label analysis for the full 1,215-record v2 priority review queue.
+  - Joins starter, targeted, and `v2active001` teacher labels by original
+    sample `id`.
+  - Current report has 1,215/1,215 valid teacher labels.
 - `scorer_error_analysis_greedy_report.md`
   - Error analysis for the original 1-5 scorer using greedy predictions.
   - Useful for understanding why the binary simplification was needed.
@@ -98,6 +103,24 @@ Common metric sections use similar names where possible:
     evaluation logic, and practical lessons from the scorer experiments.
   - Includes early-stop/checkpoint guidance and training tricks used or worth
     trying.
+- `teacher_sampling_v2_active_pilot_001_report.md`
+  - Deduplicated active-learning teacher batch report.
+  - Built from the 1,215-record v2 scorer priority queue after excluding
+    starter/targeted records that already have teacher labels by original `id`.
+  - Completed first active-learning teacher-labeling batch (`v2active001`).
+- `scorer_binary_v3_qwen3_8b_experiment_report.md`
+  - Current canonical v3 Qwen3-8B binary scorer report.
+  - Summarizes both conservative and confident v3 training runs, valid/test
+    greedy evaluation, and recommended next actions.
+  - Current main quality-first candidate: v3 conservative.
+- `scorer_binary_v3_conservative_eval_valid_report.md`
+  - Valid-set evaluation for the Qwen3-8B v3 conservative scorer.
+- `scorer_binary_v3_conservative_eval_test_report.md`
+  - Test-set evaluation for the Qwen3-8B v3 conservative scorer.
+- `scorer_binary_v3_confident_eval_valid_report.md`
+  - Valid-set evaluation for the Qwen3-8B v3 confident scorer.
+- `scorer_binary_v3_confident_eval_test_report.md`
+  - Test-set evaluation for the Qwen3-8B v3 confident scorer.
 
 ## Teacher Data Reports
 
@@ -107,6 +130,14 @@ Common metric sections use similar names where possible:
 - `teacher_label_report_targeted_1200.md`
   - DeepSeek teacher-label report for the targeted 1,200-example batch.
   - This is the canonical targeted-label report for v2 data construction.
+- `teacher_sampling_v2_active_pilot_001_report.md`
+  - First deduplicated active-learning teacher batch from the v2 scorer
+    priority queue.
+  - Selected 388 records that were unlabeled at selection time; 827 priority
+    records already had teacher labels and were kept as analysis matches.
+- `teacher_label_report_v2active001.md`
+  - Teacher-label analysis for the 388-record active-learning batch.
+  - After retry append and original-`id` dedupe, all 388 rows are valid.
 - `teacher_sampling_starter_1000_report.md`
   - Source-aware sampling report for the 1,000-example starter set.
 - `teacher_label_report_1000.md`
@@ -152,3 +183,5 @@ specific generated datasets:
 - `data/labeled/scorer_binary_sft/scorer_binary_confident_1000_report.md`
 - `data/labeled/scorer_binary_sft_v2/scorer_binary_v2_confident_report.md`
 - `data/labeled/scorer_binary_sft_v2/scorer_binary_v2_conservative_report.md`
+- `data/labeled/scorer_binary_sft_v3/scorer_binary_v3_confident_report.md`
+- `data/labeled/scorer_binary_sft_v3/scorer_binary_v3_conservative_report.md`

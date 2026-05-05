@@ -14,7 +14,7 @@
 | Field | Value |
 | --- | --- |
 | Model | N/A |
-| Data version | N/A |
+| Data version | v3 binary scorer ready for training |
 | Tooling | LLaMA-Factory, conda environment `llamafactory` |
 | Script | `scripts/start_llamafactory_webui.ps1` |
 | Current use | Start local LLaMA-Factory WebUI safely on this machine |
@@ -64,28 +64,62 @@ Set-Location '\\ad.uillinois.edu\engr-ews\haoran27\微调\LLaMA-Factory'
 & 'C:\Users\haoran27\miniconda3\envs\llamafactory\Scripts\llamafactory-cli.exe' webui
 ```
 
-## Scorer Dataset
+## Current Scorer Dataset
 
 Dataset directory:
 
 ```text
-\\ad.uillinois.edu\engr-ews\haoran27\微调\SFT-DataJudge\data\labeled\scorer_sft
+\\ad.uillinois.edu\engr-ews\haoran27\微调\SFT-DataJudge\data\labeled\scorer_binary_sft_v3
 ```
 
-Train dataset:
+Conservative train/validation/test datasets:
 
 ```text
-scorer_sft_1000_train
+scorer_binary_v3_conservative_train
+scorer_binary_v3_conservative_valid
+scorer_binary_v3_conservative_test
 ```
 
-Validation dataset:
+Confident train/validation/test datasets:
 
 ```text
-scorer_sft_1000_valid
+scorer_binary_v3_confident_train
+scorer_binary_v3_confident_valid
+scorer_binary_v3_confident_test
 ```
 
-Test dataset:
+## Current Training Commands
 
-```text
-scorer_sft_1000_test
+Run from the LLaMA-Factory repo:
+
+```powershell
+Set-Location '\\ad.uillinois.edu\engr-ews\haoran27\微调\LLaMA-Factory'
+& 'C:\Users\haoran27\miniconda3\envs\llamafactory\Scripts\llamafactory-cli.exe' train '\\ad.uillinois.edu\engr-ews\haoran27\微调\SFT-DataJudge\configs\llamafactory\scorer_binary_v3_conservative_qwen3_8b_lora_e3.yaml'
 ```
+
+After conservative finishes, train the companion confident variant:
+
+```powershell
+Set-Location '\\ad.uillinois.edu\engr-ews\haoran27\微调\LLaMA-Factory'
+& 'C:\Users\haoran27\miniconda3\envs\llamafactory\Scripts\llamafactory-cli.exe' train '\\ad.uillinois.edu\engr-ews\haoran27\微调\SFT-DataJudge\configs\llamafactory\scorer_binary_v3_confident_qwen3_8b_lora_e3.yaml'
+```
+
+## Current Prediction And Evaluation Commands
+
+After a training run finishes, run greedy prediction through the matching
+`*_predict_valid.yaml` and `*_predict_test.yaml` configs. Example for v3
+conservative valid:
+
+```powershell
+Set-Location '\\ad.uillinois.edu\engr-ews\haoran27\微调\LLaMA-Factory'
+& 'C:\Users\haoran27\miniconda3\envs\llamafactory\Scripts\llamafactory-cli.exe' train '\\ad.uillinois.edu\engr-ews\haoran27\微调\SFT-DataJudge\configs\llamafactory\scorer_binary_v3_conservative_qwen3_8b_lora_predict_valid.yaml'
+```
+
+Then evaluate the generated predictions from the SFT-DataJudge repo:
+
+```powershell
+Set-Location '\\ad.uillinois.edu\engr-ews\haoran27\微调\SFT-DataJudge'
+python .\scripts\10_evaluate_binary_scorer_predictions.py --predictions 'C:\Users\haoran27\llamafactory_outputs\scorer_binary_v3_conservative_qwen3_8b_lora_e3_predict_valid_greedy\generated_predictions.jsonl' --reference '.\data\labeled\scorer_binary_sft_v3\scorer_binary_v3_conservative_valid.jsonl' --split valid --run-name scorer_binary_v3_conservative_qwen3_8b --output-md '.\reports\scorer_binary_v3_conservative_eval_valid_report.md' --output-json '.\data\eval\scorer_binary_v3_conservative_eval_valid_metrics.json'
+```
+
+Use the same pattern for v3 conservative test and both v3 confident splits.

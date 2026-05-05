@@ -32,6 +32,9 @@ BINARY_SYSTEM = (
 )
 
 
+DEFAULT_LOCKED_TEST_IDS = PROJECT_ROOT / "data" / "eval" / "locked_test_ids.json"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build binary LLaMA-Factory scorer SFT data.")
     parser.add_argument("--candidates", type=Path, nargs="+", default=[DEFAULT_CANDIDATES])
@@ -50,6 +53,15 @@ def parse_args() -> argparse.Namespace:
         choices=["confident", "all"],
         default="confident",
         help="confident skips score=3; all maps score=3 to not_keep.",
+    )
+    parser.add_argument(
+        "--locked-test-ids",
+        type=Path,
+        default=None,
+        help=(
+            "JSON file with sample ids that must always land in the test split. "
+            f"Defaults to {DEFAULT_LOCKED_TEST_IDS} if that file exists."
+        ),
     )
     return parser.parse_args()
 
@@ -213,12 +225,23 @@ def write_report(
     mode: str,
     records: list[dict[str, Any]],
     skipped: list[dict[str, Any]],
+    candidate_paths: list[Path],
+    label_prefixes: list[str],
+    locked_test_ids_path: Path | None,
+    locked_test_overridden: int,
 ) -> None:
     split_counts = Counter(record["meta"]["split"] for record in records)
     source_counts = Counter(record["meta"]["source"] for record in records)
     verdict_counts = Counter(record["meta"]["binary_verdict"] for record in records)
     score_counts = Counter(record["meta"]["teacher_score"] for record in records)
     source_verdict_counts = Counter((record["meta"]["source"], record["meta"]["binary_verdict"]) for record in records)
+
+    locked_line = (
+        f"- Locked test ids: `{locked_test_ids_path.as_posix()}` "
+        f"(forced {locked_test_overridden} record(s) to test split)."
+        if locked_test_ids_path
+        else "- Locked test ids: not applied."
+    )
 
     lines = [
         "# Binary Scorer SFT Dataset Report",
@@ -228,6 +251,17 @@ def write_report(
         f"- Mode: `{mode}`",
         "- Mapping: teacher score 4/5 -> `keep`; teacher score 1/2 -> `not_keep`."
         + (" Score 3 is skipped." if mode == "confident" else " Score 3 -> `not_keep`."),
+        locked_line,
+        "",
+        "## Build Inputs",
+        "",
+        "Candidate files:",
+        "",
+        *[f"- `{path.as_posix()}`" for path in candidate_paths],
+        "",
+        "Label prefixes:",
+        "",
+        *[f"- `{prefix}`" for prefix in label_prefixes],
         "",
         "## Outputs",
         "",
@@ -278,6 +312,16 @@ def write_report(
     (output_dir / f"{dataset_prefix}_report.md").write_text("\n".join(lines), encoding="utf-8")
 
 
+def load_locked_test_ids(args: argparse.Namespace) -> tuple[set[str], Path | None]:
+    path = args.locked_test_ids
+    if path is None and DEFAULT_LOCKED_TEST_IDS.exists():
+        path = DEFAULT_LOCKED_TEST_IDS
+    if path is None:
+        return set(), None
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return set(data["ids"]), path
+
+
 def main() -> None:
     args = parse_args()
     candidates = {}
@@ -307,6 +351,15 @@ def main() -> None:
             continue
         sft_records.append(sft_record)
 
+    locked_test_ids, locked_test_ids_path = load_locked_test_ids(args)
+    overridden = 0
+    for record in sft_records:
+        if record["meta"]["id"] in locked_test_ids and record["meta"]["split"] != "test":
+            record["meta"]["split"] = "test"
+            overridden += 1
+    if overridden:
+        print(f"[locked_test_ids] Forced {overridden} record(s) from train/valid to test split.")
+
     args.output_dir.mkdir(parents=True, exist_ok=True)
     for split in SPLITS:
         split_records = [record for record in sft_records if record["meta"]["split"] == split]
@@ -314,7 +367,17 @@ def main() -> None:
     write_jsonl(args.output_dir / f"{args.dataset_prefix}_all.jsonl", sft_records)
     write_jsonl(args.output_dir / f"{args.dataset_prefix}_skipped.jsonl", skipped)
     write_dataset_info(args.output_dir, args.dataset_prefix)
-    write_report(args.output_dir, args.dataset_prefix, args.mode, sft_records, skipped)
+    write_report(
+        args.output_dir,
+        args.dataset_prefix,
+        args.mode,
+        sft_records,
+        skipped,
+        candidate_paths=list(args.candidates),
+        label_prefixes=label_prefixes,
+        locked_test_ids_path=locked_test_ids_path,
+        locked_test_overridden=overridden,
+    )
 
     print(
         json.dumps(

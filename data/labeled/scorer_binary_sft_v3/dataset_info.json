@@ -1,0 +1,74 @@
+{
+  "scorer_binary_v3_conservative_all": {
+    "file_name": "scorer_binary_v3_conservative_all.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "scorer_binary_v3_conservative_train": {
+    "file_name": "scorer_binary_v3_conservative_train.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "scorer_binary_v3_conservative_valid": {
+    "file_name": "scorer_binary_v3_conservative_valid.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "scorer_binary_v3_conservative_test": {
+    "file_name": "scorer_binary_v3_conservative_test.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "scorer_binary_v3_confident_all": {
+    "file_name": "scorer_binary_v3_confident_all.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "scorer_binary_v3_confident_train": {
+    "file_name": "scorer_binary_v3_confident_train.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "scorer_binary_v3_confident_valid": {
+    "file_name": "scorer_binary_v3_confident_valid.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "scorer_binary_v3_confident_test": {
+    "file_name": "scorer_binary_v3_confident_test.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  }
+}

@@ -6,7 +6,7 @@ distilling labels from a stronger teacher model.
 
 ## Current Status
 
-Last updated: 2026-05-03
+Last updated: 2026-05-05
 
 The compact baseline is a binary "confident scorer":
 
@@ -77,11 +77,35 @@ first 919-record teacher batch is
 dry-run prompts rendered at
 `data/labeled/teacher_judge/v2_pilot_top919/v2_pilot_top919_teacher_prompts.jsonl`.
 
+The priority queue has now been deduplicated against existing starter and
+targeted teacher labels by original sample `id`. The first active-learning
+teacher batch is `v2active001`: 388 records selected from previously unlabeled
+priority cases, with prompts at
+`data/labeled/teacher_judge/v2active001/v2active001_teacher_prompts.jsonl`.
+After teacher labeling and retry, `v2active001` has 388/388 deduplicated valid
+teacher labels. The full 1,215-record priority analysis has 1,215/1,215 valid
+teacher labels joined from starter, targeted, and `v2active001`; the report is
+`reports/teacher_candidates_all_v2_priority_teacher_analysis_report.md`.
+
 Recommended next action:
 
-- Send the pilot priority queue to the teacher model before running 4B v2 or
-  full 188k inference. Start with the 273 disagreements plus the 646
-  both-not-keep records.
+- V3 Qwen3-8B conservative/confident scorers are now trained and evaluated.
+  Use v3 conservative as the current quality-first scorer, and v3 confident as
+  the high-confidence keep companion.
+
+V3 data ready for training:
+
+| Dataset | Records | Train | Valid | Test | Keep | Not-keep | Score 3 Policy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `scorer_binary_v3_conservative` | 2,588 | 2,057 | 267 | 264 | 1,438 | 1,150 | mapped to `not_keep` |
+| `scorer_binary_v3_confident` | 2,326 | 1,855 | 234 | 237 | 1,438 | 888 | skipped |
+
+V3 test metrics:
+
+| Model | Accuracy | Keep F1 | Not-keep F1 | Not-keep recall |
+| --- | ---: | ---: | ---: | ---: |
+| v3 conservative Qwen3-8B | 76.89% | 0.796 | 0.734 | 77.06% |
+| v3 confident Qwen3-8B | 78.90% | 0.851 | 0.638 | 53.66% |
 
 ## Repository Layout
 
@@ -113,8 +137,12 @@ Most JSONL data and model outputs are generated artifacts and are ignored by
 11. Train and evaluate the Qwen3-8B v2 conservative scorer.
 12. Train and evaluate the Qwen3-8B v2 confident ablation.
 13. Run both Qwen3-8B v2 scorers over the 3,600-row teacher-candidate pilot.
-14. Next: label the priority review queue with the teacher model and retrain
-    from teacher-confirmed hard cases.
+14. Analyze the teacher-labeled priority review queue and retrain from
+    teacher-confirmed hard cases.
+15. Build v3 binary scorer datasets from starter + targeted + `v2active001`.
+16. Train/evaluate Qwen3-8B v3 conservative and confident variants.
+17. Next: run both v3 scorers on a larger unlabeled pool and build the next
+    active-learning teacher batch.
 
 ## Key Reports
 
@@ -131,6 +159,11 @@ Most useful current reports:
 - `reports/scorer_binary_qwen3_8b_v1_experiment_report.md`
 - `reports/scorer_binary_v2_conservative_qwen3_8b_experiment_report.md`
 - `reports/scorer_binary_v2_confident_qwen3_8b_experiment_report.md`
+- `reports/scorer_binary_v3_qwen3_8b_experiment_report.md`
+- `reports/scorer_binary_v3_conservative_eval_valid_report.md`
+- `reports/scorer_binary_v3_conservative_eval_test_report.md`
+- `reports/scorer_binary_v3_confident_eval_valid_report.md`
+- `reports/scorer_binary_v3_confident_eval_test_report.md`
 - `reports/scorer_binary_eval_valid_report.md`
 - `reports/scorer_binary_eval_test_report.md`
 - `reports/scorer_binary_v2_conservative_eval_valid_report.md`
@@ -140,8 +173,12 @@ Most useful current reports:
 - `reports/teacher_candidates_all_v2_model_agreement_report.md`
 - `reports/teacher_candidates_all_v2_conservative_inference_report.md`
 - `reports/teacher_candidates_all_v2_confident_inference_report.md`
+- `reports/teacher_candidates_all_v2_priority_teacher_analysis_report.md`
 - `reports/training_lessons_and_notes.md`
 - `reports/teacher_label_report_targeted_1200.md`
+- `reports/teacher_label_report_v2active001.md`
+- `data/labeled/scorer_binary_sft_v3/scorer_binary_v3_conservative_report.md`
+- `data/labeled/scorer_binary_sft_v3/scorer_binary_v3_confident_report.md`
 - `reports/scorer_error_analysis_greedy_report.md`
 - `reports/teacher_label_report_1000.md`
 - `reports/teacher_sampling_starter_1000_report.md`
@@ -151,10 +188,29 @@ Most useful current reports:
 
 Run scripts from the repository root.
 
+`scripts/09_build_binary_scorer_sft.py` defaults to the v1 starter_1000 dataset.
+To rebuild the current v3 datasets, pass all candidate files and all label
+prefixes explicitly. Example:
+
 ```powershell
-python scripts/09_build_binary_scorer_sft.py
+python scripts/09_build_binary_scorer_sft.py `
+  --candidates `
+    data/splits/teacher_judge/starter_1000/teacher_candidates_all.jsonl `
+    data/splits/teacher_judge/targeted_1200/targeted_teacher_candidates_all.jsonl `
+    data/splits/teacher_judge/v2_active_pilot_001/v2active001_teacher_candidates_all.jsonl `
+  --labels-dir data/labeled/teacher_judge `
+  --label-prefix teacher_labels_1000 `
+  --label-prefix targeted_1200_teacher_labels `
+  --label-prefix v2active001/v2active001_teacher_labels `
+  --output-dir data/labeled/scorer_binary_sft_v3 `
+  --dataset-prefix scorer_binary_v3_conservative `
+  --mode all
 python scripts/10_evaluate_binary_scorer_predictions.py --help
 ```
+
+The locked evaluation set at `data/eval/locked_test_ids.json` is applied
+automatically when present, so any sample id listed there is forced into the
+test split regardless of the candidate file's original split assignment.
 
 LLaMA-Factory WebUI startup is documented in:
 

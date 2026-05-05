@@ -1,6 +1,6 @@
 # Script Index
 
-Last updated: 2026-05-02
+Last updated: 2026-05-05
 
 Run scripts from the repository root unless a script says otherwise.
 
@@ -20,10 +20,21 @@ Run scripts from the repository root unless a script says otherwise.
   - Supports resume-style operation by skipping examples already written.
 - `05_analyze_teacher_labels.py`
   - Summarizes teacher labels and writes label reports.
+  - Use `--dedupe-by-id` when retry outputs were appended to the same JSONL;
+    this keeps the last record for each original sample `id`.
 - `11_build_targeted_teacher_batch.py`
   - Builds the next targeted 1,200-example teacher-labeling batch.
   - Prioritizes `cot_zh`, score-3-like review cases, rule-flagged review cases,
     and hard source-specific examples.
+- `13_build_teacher_review_batch.py`
+  - Builds deduplicated active-learning teacher batches from scorer priority
+    JSONL files.
+  - Excludes existing teacher labels by original sample `id`, not by
+    `teacher_sample_id`.
+  - Writes all/train/valid/test candidate files, already-labeled matches, and a
+    markdown batch report.
+  - Reuse this after larger local scorer runs by changing `--input`,
+    `--batch-prefix`, `--output-dir`, and `--known-label-file`.
 
 ## Scorer Dataset Builders
 
@@ -36,6 +47,8 @@ Run scripts from the repository root unless a script says otherwise.
     and skips score 3.
   - In `all` mode, maps score 3 to `not_keep` for a conservative quality-first
     training target.
+  - Current v3 data was built by merging starter, targeted, and `v2active001`
+    labels into `data/labeled/scorer_binary_sft_v3/`.
 
 ## Evaluation
 
@@ -50,6 +63,13 @@ Run scripts from the repository root unless a script says otherwise.
   - Uses the same prompt as `09_build_binary_scorer_sft.py`.
   - Supports resume-by-id, deterministic greedy generation, prompt-only dry runs,
     scored JSONL output, and source/rule-disagreement summary reports.
+- `14_analyze_teacher_review_priority.py`
+  - Joins scorer priority queues with all available Teacher Judge labels by
+    original sample `id`.
+  - Writes a full joined JSONL, metrics JSON, and markdown report for bucket,
+    source, priority-reason, and scorer-vs-teacher analysis.
+  - Current default analyzes the 1,215-record v2 priority queue using starter,
+    targeted, and `v2active001` teacher labels.
 
 ## Local Utilities
 

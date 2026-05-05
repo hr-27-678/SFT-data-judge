@@ -1,0 +1,26 @@
+{
+  "split": "valid",
+  "run_name": "scorer_binary_v3_confident_qwen3_8b",
+  "records": 234,
+  "valid_prediction_json": 234,
+  "valid_prediction_json_rate": 1.0,
+  "prediction_schema_valid": 234,
+  "prediction_schema_valid_rate": 1.0,
+  "valid_label_json": 234,
+  "accuracy": 170,
+  "accuracy_rate": 0.7264957264957265,
+  "keep_precision": 0.7321428571428571,
+  "keep_recall": 0.8661971830985915,
+  "keep_f1": 0.7935483870967741,
+  "not_keep_precision": 0.7121212121212122,
+  "not_keep_recall": 0.5108695652173914,
+  "not_keep_f1": 0.5949367088607596,
+  "label_counts": {
+    "not_keep": 92,
+    "keep": 142
+  },
+  "prediction_counts": {
+    "keep": 168,
+    "not_keep": 66
+  }
+}

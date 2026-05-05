@@ -25,6 +25,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--report-path", type=Path, default=DEFAULT_REPORT_PATH)
     parser.add_argument("--split-prefix", type=str, default="teacher_labels_1000")
+    parser.add_argument(
+        "--dedupe-by-id",
+        action="store_true",
+        help="Keep the last record for duplicate original sample ids. Useful when retry outputs are appended.",
+    )
     return parser.parse_args()
 
 
@@ -35,6 +40,33 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
             if line.strip():
                 records.append(json.loads(line))
     return records
+
+
+def dedupe_by_id(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    deduped: dict[str, dict[str, Any]] = {}
+    first_seen_order: list[str] = []
+    duplicate_ids: Counter[str] = Counter()
+    missing_id_records: list[dict[str, Any]] = []
+
+    for record in records:
+        key = str(record.get("id") or "")
+        if not key:
+            missing_id_records.append(record)
+            continue
+        if key in deduped:
+            duplicate_ids[key] += 1
+        else:
+            first_seen_order.append(key)
+        deduped[key] = record
+
+    output_records = [deduped[key] for key in first_seen_order] + missing_id_records
+    return output_records, {
+        "raw_records": len(records),
+        "records_after_dedupe": len(output_records),
+        "duplicate_id_rows": sum(duplicate_ids.values()),
+        "duplicate_id_examples": duplicate_ids.most_common(10),
+        "missing_id_records": len(missing_id_records),
+    }
 
 
 def write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
@@ -161,11 +193,31 @@ def split_outputs(records: list[dict[str, Any]], output_dir: Path, split_prefix:
     return outputs
 
 
-def write_report(path: Path, records: list[dict[str, Any]], split_paths: dict[str, Path], split_prefix: str) -> None:
+def write_report(
+    path: Path,
+    records: list[dict[str, Any]],
+    split_paths: dict[str, Path],
+    split_prefix: str,
+    dedupe_metadata: dict[str, Any] | None = None,
+) -> None:
     null_labels = sum(1 for record in records if record.get("teacher_label") is None)
     validation_errors = sum(1 for record in records if has_validation_errors(record))
     split_counter = count_by(records, "split")
     source_counter = count_by(records, "source")
+    validation_rows = [
+        ["Records", len(records)],
+        ["Null labels", null_labels],
+        ["Rows with validation errors", validation_errors],
+    ]
+    if dedupe_metadata:
+        validation_rows.extend(
+            [
+                ["Raw input rows", dedupe_metadata["raw_records"]],
+                ["Rows after id dedupe", dedupe_metadata["records_after_dedupe"]],
+                ["Duplicate id rows removed", dedupe_metadata["duplicate_id_rows"]],
+                ["Rows missing original id", dedupe_metadata["missing_id_records"]],
+            ]
+        )
 
     lines = [
         f"# Teacher Label Report ({split_prefix})",
@@ -176,11 +228,7 @@ def write_report(path: Path, records: list[dict[str, Any]], split_paths: dict[st
         "",
         markdown_table(
             ["Check", "Result"],
-            [
-                ["Records", len(records)],
-                ["Null labels", null_labels],
-                ["Rows with validation errors", validation_errors],
-            ],
+            validation_rows,
         ),
         "",
         "## Split Outputs",
@@ -224,14 +272,21 @@ def write_report(path: Path, records: list[dict[str, Any]], split_paths: dict[st
 
 def main() -> None:
     args = parse_args()
-    records = read_jsonl(args.input)
+    raw_records = read_jsonl(args.input)
+    dedupe_metadata = None
+    records = raw_records
+    if args.dedupe_by_id:
+        records, dedupe_metadata = dedupe_by_id(raw_records)
     split_paths = split_outputs(records, args.output_dir, args.split_prefix)
-    write_report(args.report_path, records, split_paths, args.split_prefix)
+    write_report(args.report_path, records, split_paths, args.split_prefix, dedupe_metadata)
     print(
         json.dumps(
             {
                 "input": str(args.input),
+                "raw_records": len(raw_records),
                 "records": len(records),
+                "dedupe_by_id": args.dedupe_by_id,
+                "duplicate_id_rows": dedupe_metadata["duplicate_id_rows"] if dedupe_metadata else 0,
                 "report": str(args.report_path),
                 "split_outputs": {split: str(path) for split, path in split_paths.items()},
             },

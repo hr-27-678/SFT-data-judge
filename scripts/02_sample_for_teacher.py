@@ -26,6 +26,13 @@ DEFAULT_SOURCE_SIZES = {
     "openmath_reasoning": 1200,
 }
 
+DEFAULT_EXCLUDE_LABEL_FILES = [
+    PROJECT_ROOT / "data" / "labeled" / "teacher_judge" / "pilot_teacher_labels.jsonl",
+    PROJECT_ROOT / "data" / "labeled" / "teacher_judge" / "teacher_labels_1000.jsonl",
+    PROJECT_ROOT / "data" / "labeled" / "teacher_judge" / "targeted_1200_teacher_labels.jsonl",
+    PROJECT_ROOT / "data" / "labeled" / "teacher_judge" / "v2active001" / "v2active001_teacher_labels.jsonl",
+]
+
 
 def parse_source_sizes(value: str | None) -> dict[str, int]:
     if not value:
@@ -74,6 +81,22 @@ def parse_args() -> argparse.Namespace:
         help="Target ratio of rule-flagged samples per source.",
     )
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
+    parser.add_argument(
+        "--exclude-label-files",
+        type=Path,
+        action="append",
+        default=None,
+        help=(
+            "Teacher-label JSONL file whose original sample ids should be excluded from sampling. "
+            "Repeatable. If omitted, defaults to all canonical teacher-label files in "
+            "data/labeled/teacher_judge/."
+        ),
+    )
+    parser.add_argument(
+        "--no-exclude-defaults",
+        action="store_true",
+        help="Do not load the default exclude label files. Useful for reproducing legacy v1 sampling runs.",
+    )
     return parser.parse_args()
 
 
@@ -318,11 +341,37 @@ def write_report(path: Path, summaries: list[dict[str, Any]], outputs: dict[str,
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def load_excluded_ids(args: argparse.Namespace) -> tuple[set[str], list[Path]]:
+    files: list[Path] = []
+    if not args.no_exclude_defaults:
+        files.extend(p for p in DEFAULT_EXCLUDE_LABEL_FILES if p.exists())
+    if args.exclude_label_files:
+        files.extend(args.exclude_label_files)
+
+    excluded: set[str] = set()
+    for path in files:
+        if not path.exists():
+            raise FileNotFoundError(f"Exclude label file not found: {path}")
+        with path.open("r", encoding="utf-8-sig") as file:
+            for line in file:
+                if not line.strip():
+                    continue
+                record = json.loads(line)
+                rid = record.get("id")
+                if rid:
+                    excluded.add(rid)
+    return excluded, files
+
+
 def main() -> None:
     args = parse_args()
     source_sizes = parse_source_sizes(args.source_sizes)
     rng = random.Random(args.seed)
     args.output_dir.mkdir(parents=True, exist_ok=True)
+
+    excluded_ids, exclude_files = load_excluded_ids(args)
+    if exclude_files:
+        print(f"[exclude] Loaded {len(excluded_ids)} ids from {len(exclude_files)} label file(s).")
 
     all_selected: list[dict[str, Any]] = []
     summaries: list[dict[str, Any]] = []
@@ -334,6 +383,12 @@ def main() -> None:
             raise FileNotFoundError(f"Missing source file: {source_path}")
 
         records = read_jsonl(source_path)
+        if excluded_ids:
+            before = len(records)
+            records = [r for r in records if r.get("id") not in excluded_ids]
+            removed = before - len(records)
+            if removed:
+                print(f"[exclude] {source}: removed {removed} already-labeled records before sampling.")
         if total > len(records):
             total = len(records)
 
