@@ -569,6 +569,122 @@ Avoid spending much more effort on the 1-5 score setup until the binary filter
 is more stable. The 1-5 scorer is useful as an error-analysis reference, but it
 is not the best current training target.
 
+## Downstream SFT Validation Plan (Phase E)
+
+This is the project's final validation: prove that the scorer actually improves
+a downstream supervised fine-tuning run, not just that it imitates teacher
+labels. As of 2026-05-05 this is design only; do not start until the gates
+below are satisfied.
+
+### Goal
+
+Show that filtering an SFT dataset with the v4 (or later) binary scorer
+produces a measurably better fine-tuned model than the same SFT pipeline run
+on (a) random data and (b) rule-clean data, on a fixed evaluation suite.
+
+### Pre-flight gates
+
+Do not start Phase E until:
+
+- The binary scorer has not_keep recall >= 85% on the locked test set
+  (`data/eval/locked_test_ids.json`). v3 conservative is at 77.06%; one or two
+  more active-learning rounds (`v2active002`, `v2active003`) should be the
+  natural lift.
+- Inference cost for filtering the SFT pool is understood. Running v4
+  conservative + confident over 188,103 records at `batch_size=1` is on the
+  order of 16-30 hours; budget GPU time or batch the pool down.
+- Disk has room for 4-5 LoRA adapters and their training/eval logs (~5-10 GB
+  per LoRA on a 7B target model).
+
+### Open decisions
+
+Each item below is a launch-blocking choice. The recommendation is the
+current default unless the user changes it.
+
+1. **Target base model.** Recommendation: `Qwen2.5-7B` base. Reasons: similar
+   capacity to the scorer, different generation than Qwen3 (so the base does
+   not have memorized scorer training data), well-studied. Alternatives:
+   `Qwen2.5-3B` for faster iteration, `Llama-3-8B` for cross-family check.
+2. **SFT data pool.** Recommendation: keep using `unified_sft_clean.jsonl`
+   (188K). Same three sources the scorer was trained on, so the scorer is in
+   distribution. Do not pull in unrelated sources for the first comparison.
+3. **Evaluation suite.** Recommendation:
+   - GSM8K (math reasoning, covers `cot_zh` and `openmath_reasoning`)
+   - IFEval (instruction following, covers `finetome`)
+   - MMLU (general knowledge baseline)
+   Skip code benchmarks (e.g. HumanEval) since the SFT pool is not code. Skip
+   preference evals (MT-Bench, AlpacaEval) for the first run because they
+   require an LLM judge and add noise.
+4. **Sample size N.** Recommendation: 20K per group. 5K is too small for MMLU
+   sensitivity, 50K doubles training time without clear benefit for a first
+   pass. Use the same N across groups so data quality is the only variable.
+5. **Comparison groups.**
+   - **G0 base.** Untrained `Qwen2.5-7B` base, zero-shot.
+   - **G1 random.** N drawn uniformly from the 188K pool.
+   - **G2 rule-clean.** N drawn uniformly from `is_clean == true` records.
+   - **G3 scorer-keep.** N drawn from records the v4 conservative scorer
+     predicts `keep`.
+   - **G4 scorer-strict.** N drawn from records where both v4 conservative
+     and v4 confident predict `keep` (intersection).
+   - **G5 anti-baseline (optional).** N drawn from records the scorer
+     predicts `not_keep`. If G5 underperforms G1, the scorer is doing
+     something useful even when G3/G4 do not beat G1 by much.
+   For all groups, match source distribution to G1 so the only difference
+   across runs is the keep/not_keep filter, not the source mix.
+6. **SFT training setup.** Recommendation: LoRA, rank 16, lr 1e-4, 3 epochs,
+   identical config across groups. Fixed seed. Save the final checkpoint of
+   each run; do not best-checkpoint-select per group, otherwise different
+   groups get different effective training durations.
+7. **What counts as "improvement."** Report the delta on each benchmark
+   relative to G0 (base) and compare deltas across G1-G4. A scorer is
+   interesting if G3 or G4 beats G1 by more than the run-to-run noise floor.
+   Rerun G1 with two seeds to estimate that noise floor.
+
+### Pipeline steps once decisions are locked
+
+1. Run v4 scorer (conservative + confident) on the full SFT pool. Save
+   keep/not_keep predictions per id.
+2. Sample G1-G4 (and optionally G5) so that source distribution matches G1
+   and N is identical.
+3. Convert each group to LLaMA-Factory SFT format and write
+   `dataset_info.json` entries.
+4. Train each group with the same LLaMA-Factory config, changing only
+   `dataset` and `output_dir`.
+5. Run the evaluation suite on G0 (base) and on each trained adapter.
+6. Aggregate results into a single comparison report and decide whether the
+   scorer is production ready or needs another scorer iteration.
+
+### New artifacts the project will need
+
+- `scripts/15_score_full_sft_pool.py`: large-scale scorer inference on
+  `unified_sft_clean.jsonl` with both v4 adapters; outputs joined per-id
+  predictions and source breakdowns.
+- `scripts/16_build_sft_comparison_groups.py`: samples G1-G4 from the scored
+  pool with matched source distribution and identical N.
+- `scripts/17_export_sft_dataset.py`: converts a sampled group into
+  LLaMA-Factory dataset format and writes a `dataset_info.json` entry.
+- `configs/llamafactory/sft_eval_*_qwen25_7b_lora.yaml`: training configs
+  for each comparison group.
+- `scripts/18_run_eval_suite.py`: wraps GSM8K / IFEval / MMLU evaluation
+  for base model and each LoRA adapter; writes per-run metrics JSON.
+- `scripts/19_compare_sft_results.py`: aggregates eval outputs into a
+  single markdown comparison table.
+
+### Risks to watch
+
+- **Source bias.** The scorer treats `cot_zh`, `finetome`, and
+  `openmath_reasoning` differently. If G3/G4 has a skewed source mix relative
+  to G1, the comparison is unfair. Match source distribution across groups.
+- **Insufficient keep pool.** If v4's overall keep rate on the 188K pool is
+  below ~30%, G3/G4 may exhaust before reaching N=20K. Verify keep rate
+  before committing to N.
+- **Run-to-run noise.** A 0.5% delta on MMLU is within noise for small N.
+  Rerun G1 with at least two seeds to set a noise floor before reading any
+  improvement claim.
+- **Evaluation leakage.** Confirm that the SFT pool does not contain GSM8K
+  or MMLU training items. If it does, the comparison measures contamination,
+  not data quality.
+
 ## GitHub Notes
 
 Commit:
