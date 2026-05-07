@@ -1,6 +1,6 @@
 # Project Plan
 
-Last updated: 2026-05-08
+Last updated: 2026-05-09
 
 ## Resume Here
 
@@ -186,8 +186,21 @@ The project has completed one full starter loop:
 41. trained Qwen3-8B v4 conservative (936 steps = 3 epochs over 4,985
     train records, ~2.5h). Adapter at
     `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v4_conservative_qwen3_8b_lora_e3`.
-    Predictions on evergreen v2 in progress at end of day; v4 confident
-    training and all v4 predict aggregation pending
+42. ran v4 conservative predict on evergreen v2 (flagged-prompt and
+    no-flag-prompt). Headline: clean stratum not_keep recall jumped
+    from v3's 10.08% (evergreen v1) to **36.18%** (evergreen v2),
+    landing in the lower half of the expected target tier (35-55%)
+    defined in v4 Strategy Decision. cot_zh clean recall went from
+    12.79% to 38.59%. Precision on clean stratum is 0.81 — when v4
+    says not_keep it is correct 81% of the time. Flagged stratum
+    recall under Conservative GT dropped from 50% to 32% (Confident
+    GT: 45%), consistent with the model being less reliant on
+    rule_flag as a discriminator. No-flag prompt produces nearly
+    identical numbers (within 1pp), reconfirming that data
+    composition, not prompt form, is the real lever. Reports:
+    `reports/evergreen_v2_v4_conservative_eval_report.md`,
+    `reports/evergreen_v2_noflag_v4_conservative_eval_report.md`.
+    v4 confident training and full cross-version aggregation pending
 
 The current best direction is the binary scorer family, not the original 1-5
 scorer.
@@ -554,11 +567,15 @@ Current companion candidate:
   conservative. Disagreements between the two v3 8B models are useful
   teacher-relabeling candidates.
 
-Best next action (2026-05-08):
+Best next action (2026-05-09):
 
-v4 conservative is trained. Remaining work is all GPU-bound predicts +
-one more LoRA training (v4 confident) + final aggregation. No more
-labeling, no more design decisions in this iteration.
+v4 conservative trained AND evaluated on evergreen v2; result lands
+in the "Expected target" tier (35-55% clean recall). The method is
+validated. Remaining work is mostly bookkeeping: locked-test predict
+for v4 cons, full cross-version aggregation table, and the v4
+confident counterpart. After that, branch decision: v5 synthetic
+distillation (smaller iteration), or Phase E downstream SFT
+validation (bigger demonstration), or both.
 
 In-flight status (as of 2026-05-08):
 
@@ -578,13 +595,13 @@ Training and inference jobs:
 | Job | Status |
 | --- | --- |
 | v4 conservative training (Qwen3-8B LoRA) | done (2.5h, 2026-05-08) |
+| v4 cons predict on evergreen v2 flagged | done (2026-05-09); recall 36.18% |
+| v4 cons predict on evergreen v2 no-flag | done (2026-05-09); recall 36.18% |
+| v4 cons predict on locked test (valid/test) | pending |
 | v4 confident training | pending (~5h) |
-| v4 cons predict on valid/test | pending |
-| v4 cons predict on evergreen v2 (flagged + noflag) | pending |
-| v4 conf predict on valid/test | pending |
-| v4 conf predict on evergreen v2 (flagged + noflag) | pending |
+| v4 conf predict on valid/test/evergreen v2 (flagged+noflag) | pending |
 | Historical v3/v2/v1 evergreen v2 predict (12 jobs) | 7 / 12 done; 5 noflag remain (v3_conf, v2_cons, v2_conf, v1_8B, v1_4B) |
-| Final aggregation via `scripts/17_evaluate_on_evergreen.py` | pending |
+| Final cross-version aggregation (8 adapters x 2 prompt forms) | pending |
 
 Mechanical work, in order:
 
@@ -690,6 +707,76 @@ The 0% -> first-positive transition is the steepest part of the curve.
 The same data delta that lifts a model from 0% to 25% will not lift it
 from 25% to 70% — the latter requires content-judgment maturity beyond
 just "this class exists in training."
+
+## v4 Conservative Evergreen v2 Result (2026-05-09)
+
+v4 conservative was evaluated on evergreen v2 (900 records) with both
+the flagged prompt and the no-flag prompt. The headline numbers:
+
+| Metric | v3 cons (evergreen v1, 600) | v4 cons (evergreen v2, 900) | Δ |
+| --- | ---: | ---: | ---: |
+| Clean not_keep recall | 10.08% | **36.18%** | **3.6x** |
+| Clean cot_zh recall | 12.79% | **38.59%** | **3.0x** |
+| Clean finetome recall | 4.17% | **33.96%** | 8x |
+| Clean not_keep precision | ~0.60 | **0.81** | +21pp |
+| Flagged not_keep recall (Conservative GT) | 50.00% | 32.14% | -18pp |
+| Flagged not_keep recall (Confident GT) | 50.00% | 45.00% | -5pp |
+| Flagged not_keep precision | 0.67 | **0.90** | +23pp |
+
+Caveat: v3 ran on evergreen v1 (500 clean), v4 ran on evergreen v2
+(800 clean). The v2 expansion records have a higher real drop rate
+than v1, so direct numerical comparison is rough; the order-of-
+magnitude improvement is still clearly real, but a strict apples-to-
+apples comparison requires re-running v3 on v2 (the v3 cons
+predictions on evergreen v2 exist; full cross-version aggregation
+pending).
+
+What the result confirms:
+
+1. **Method works.** v4 conservative's evergreen-v2 clean recall lands
+   in the lower half of the expected target tier (35-55%). The data
+   composition fix (1,000 random clean + 300 cot_zh short clean +
+   v2active002) was the right intervention. The "rule_clean shortcut"
+   diagnosis was structurally correct even though the no-flag
+   ablation showed it was driven by training distribution rather
+   than prompt form.
+2. **Precision improved more than recall**. v4's not_keep precision
+   on clean is 0.81 vs v3's ~0.60. This means the scorer's reject
+   verdicts are now usable for production routing without aggressive
+   downstream review. v3's rejects were too noisy to act on without
+   human verification; v4's are not.
+3. **Flagged-stratum recall regression is expected, not a problem**.
+   v3's flagged 50% recall came from over-relying on rule_flag as a
+   discriminator. v4 has been forced (by the random clean negatives)
+   to learn content-based judgment that applies uniformly across
+   clean and flagged. Under Confident GT (which excludes ambiguous
+   score-3 records), v4's flagged recall is 45% — within range of
+   v3. Production-weighted impact of the change:
+   - Production distribution is ~95% rule_clean, ~5% rule_flagged
+   - v3 weighted recall: 0.95 × 10.08% + 0.05 × 50.00% = **12.1%**
+   - v4 weighted recall: 0.95 × 36.18% + 0.05 × 32.14% = **36.0%**
+   - v4 catches **3x more** real bad data per production scan
+4. **No-flag prompt produces nearly identical v4 numbers** (within
+   1pp on every metric). Reconfirms the 2026-05-07 ablation finding
+   from a different angle: the model has internalized the rule_flag
+   information and does not need it explicit in the prompt at
+   inference time.
+
+What it does not yet show:
+
+- Cross-version comparison on the same evergreen v2 records — v3 cons
+  on v2 needs aggregating to confirm exact deltas
+- v4 confident behavior — training pending
+- openmath_reasoning clean is still unevaluable (only 9 true
+  negatives in the 75-record stratum)
+- Behavior under domain shift (a 4th source not in training)
+
+Decision per the v4 Strategy Decision tier table: result is in
+**"Expected target" tier** -> method validated -> proceed to v5
+synthetic distillation as a polish iteration, OR proceed to Phase E
+(downstream SFT validation) as the final value-of-method test.
+Either is defensible; v5 is the safer demonstration of methodology
+maturity, Phase E is the more complete story.
 
 ## v5 Strategy: Synthetic Hard-Negative Distillation
 

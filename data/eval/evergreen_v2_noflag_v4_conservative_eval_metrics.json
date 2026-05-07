@@ -1,0 +1,182 @@
+{
+  "v4_conservative_noflag": {
+    "conservative": {
+      "clean": {
+        "n": 800,
+        "accuracy": 0.7775,
+        "json_valid_rate": 1.0,
+        "keep": {
+          "precision": 0.7724637681159421,
+          "recall": 0.9620938628158845,
+          "f1": 0.8569131832797429,
+          "support": 554
+        },
+        "not_keep": {
+          "precision": 0.8090909090909091,
+          "recall": 0.3617886178861789,
+          "f1": 0.5,
+          "support": 246
+        }
+      },
+      "flagged": {
+        "n": 100,
+        "accuracy": 0.8,
+        "json_valid_rate": 1.0,
+        "keep": {
+          "precision": 0.8023255813953488,
+          "recall": 0.9583333333333334,
+          "f1": 0.8734177215189873,
+          "support": 72
+        },
+        "not_keep": {
+          "precision": 0.7857142857142857,
+          "recall": 0.39285714285714285,
+          "f1": 0.5238095238095237,
+          "support": 28
+        }
+      },
+      "clean_by_source": {
+        "cot_zh": {
+          "n": 500,
+          "accuracy": 0.744,
+          "json_valid_rate": 1.0,
+          "keep": {
+            "precision": 0.7270531400966184,
+            "recall": 0.9525316455696202,
+            "f1": 0.8246575342465754,
+            "support": 316
+          },
+          "not_keep": {
+            "precision": 0.8255813953488372,
+            "recall": 0.3858695652173913,
+            "f1": 0.5259259259259259,
+            "support": 184
+          }
+        },
+        "finetome": {
+          "n": 225,
+          "accuracy": 0.8177777777777778,
+          "json_valid_rate": 1.0,
+          "keep": {
+            "precision": 0.8258706467661692,
+            "recall": 0.9651162790697675,
+            "f1": 0.8900804289544236,
+            "support": 172
+          },
+          "not_keep": {
+            "precision": 0.75,
+            "recall": 0.33962264150943394,
+            "f1": 0.4675324675324676,
+            "support": 53
+          }
+        },
+        "openmath_reasoning": {
+          "n": 75,
+          "accuracy": 0.88,
+          "json_valid_rate": 1.0,
+          "keep": {
+            "precision": 0.88,
+            "recall": 1.0,
+            "f1": 0.9361702127659575,
+            "support": 66
+          },
+          "not_keep": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 9
+          }
+        }
+      }
+    },
+    "confident": {
+      "clean": {
+        "n": 736,
+        "accuracy": 0.8301630434782609,
+        "json_valid_rate": 1.0,
+        "keep": {
+          "precision": 0.8367346938775511,
+          "recall": 0.9620938628158845,
+          "f1": 0.8950461796809404,
+          "support": 554
+        },
+        "not_keep": {
+          "precision": 0.7878787878787878,
+          "recall": 0.42857142857142855,
+          "f1": 0.5551601423487543,
+          "support": 182
+        }
+      },
+      "flagged": {
+        "n": 92,
+        "accuracy": 0.8586956521739131,
+        "json_valid_rate": 1.0,
+        "keep": {
+          "precision": 0.8734177215189873,
+          "recall": 0.9583333333333334,
+          "f1": 0.913907284768212,
+          "support": 72
+        },
+        "not_keep": {
+          "precision": 0.7692307692307693,
+          "recall": 0.5,
+          "f1": 0.6060606060606061,
+          "support": 20
+        }
+      },
+      "clean_by_source": {
+        "cot_zh": {
+          "n": 448,
+          "accuracy": 0.8058035714285714,
+          "json_valid_rate": 1.0,
+          "keep": {
+            "precision": 0.806970509383378,
+            "recall": 0.9525316455696202,
+            "f1": 0.8737300435413642,
+            "support": 316
+          },
+          "not_keep": {
+            "precision": 0.8,
+            "recall": 0.45454545454545453,
+            "f1": 0.5797101449275363,
+            "support": 132
+          }
+        },
+        "finetome": {
+          "n": 217,
+          "accuracy": 0.847926267281106,
+          "json_valid_rate": 1.0,
+          "keep": {
+            "precision": 0.8601036269430051,
+            "recall": 0.9651162790697675,
+            "f1": 0.9095890410958904,
+            "support": 172
+          },
+          "not_keep": {
+            "precision": 0.75,
+            "recall": 0.4,
+            "f1": 0.5217391304347827,
+            "support": 45
+          }
+        },
+        "openmath_reasoning": {
+          "n": 71,
+          "accuracy": 0.9295774647887324,
+          "json_valid_rate": 1.0,
+          "keep": {
+            "precision": 0.9295774647887324,
+            "recall": 1.0,
+            "f1": 0.9635036496350364,
+            "support": 66
+          },
+          "not_keep": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 5
+          }
+        }
+      }
+    }
+  }
+}

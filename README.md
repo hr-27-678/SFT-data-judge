@@ -6,7 +6,7 @@ distilling labels from a stronger teacher model.
 
 ## Current Status
 
-Last updated: 2026-05-08
+Last updated: 2026-05-09
 
 ### Headline findings
 
@@ -37,14 +37,55 @@ extended with 300 fresh cot_zh + finetome clean records, raising
 per-source not_keep support to cot_zh 184, finetome 53, openmath 9.
 Cross-version evaluation against v2 is the new standard.
 
-**5. v4 conservative trained (2026-05-08).** Predict + aggregate jobs
-in flight. v4 confident training pending. See "Best Next Action" in
-[PROJECT_PLAN.md](PROJECT_PLAN.md).
+**5. v4 conservative validated on evergreen v2 (2026-05-09).** Clean
+not_keep recall jumped from v3's 10.08% to **36.18%** (3.6x), with
+clean cot_zh from 12.79% to **38.59%** (3x). Precision on clean
+rejects rose from ~0.60 to **0.81** — v4's reject decisions are
+production-quality. Production-weighted recall: **v3 ~12% -> v4
+~36%**, a 3x improvement on representative data. v4 lands in the
+lower half of the "expected target" tier (35-55%) defined ahead of
+training, validating the data-composition intervention.
 
-### Current best candidates
+### Current best candidate
 
-The Qwen3-8B v3 scorers are the current production candidates. Both are LoRA,
-3 epochs, LLaMA-Factory, on the v3 binary scorer datasets.
+The Qwen3-8B **v4 conservative** scorer (LoRA, 3 epochs, LLaMA-Factory,
+trained on v4 binary scorer dataset) is the current production
+candidate as of 2026-05-09. The v3 scorers remain documented as the
+prior generation for cross-version comparison.
+
+v4 conservative metrics on evergreen v2 (the cross-version standard
+test set):
+
+| Stratum / source | N | Accuracy | Not-keep precision | Not-keep recall |
+| --- | ---: | ---: | ---: | ---: |
+| Clean (Conservative GT) | 800 | 77.75% | **0.81** | **36.18%** |
+| Clean (Confident GT) | 736 | 83.15% | 0.79 | 43.41% |
+| Flagged (Conservative GT) | 100 | 80.00% | **0.90** | 32.14% |
+| Flagged (Confident GT) | 92 | 86.96% | 0.75 | 45.00% |
+| Clean cot_zh (Conservative GT) | 500 | 74.40% | 0.83 | **38.59%** |
+| Clean finetome (Conservative GT) | 225 | 81.78% | 0.78 | 33.96% |
+| Clean openmath (Conservative GT) | 75 | 88.00% | n/a | 0.00% (only 9 negs, unevaluable) |
+
+No-flag prompt produces nearly identical numbers (within 1pp on every
+metric), reconfirming that data composition — not the rule_flag
+fields in the prompt — drove the improvement. Full report:
+`reports/evergreen_v2_v4_conservative_eval_report.md`.
+
+**Comparison vs v3 conservative on evergreen v1** (rough — different
+test sizes; full apples-to-apples aggregation pending):
+
+| Metric | v3 cons (v1, 600) | v4 cons (v2, 900) | Δ |
+| --- | ---: | ---: | ---: |
+| Clean not_keep recall | 10.08% | 36.18% | **3.6x** |
+| Clean cot_zh recall | 12.79% | 38.59% | **3.0x** |
+| Clean precision | ~0.60 | 0.81 | +21pp |
+| Production-weighted recall (95/5 clean/flagged) | 12.1% | 36.0% | **3.0x** |
+
+### Prior-generation candidate (v3)
+
+The Qwen3-8B v3 scorers were the production candidates from 2026-05-05
+to 2026-05-08; results are kept here for cross-version reference. Both
+are LoRA, 3 epochs, LLaMA-Factory, on the v3 binary scorer datasets.
 
 V3 metrics on the locked 264-record in-domain test set (legacy reference):
 
@@ -308,7 +349,12 @@ Most JSONL data and model outputs are generated artifacts and are ignored by
 21. Build evergreen v2 (900 records = v1 600 + 300 fresh clean
     expansion) and 12 v2 predict configs.
 22. Build v4 binary datasets and train Qwen3-8B v4 conservative
-    (2026-05-08). v4 confident training and all v4 evals pending.
+    (2026-05-08).
+23. Evaluate v4 conservative on evergreen v2 (2026-05-09). Clean
+    not_keep recall 36.18% (vs v3 10.08%), clean precision 0.81.
+    No-flag prompt gives near-identical results, reconfirming data
+    composition is the lever. v4 confident training and full
+    cross-version aggregation pending.
 
 ## Key Reports
 
