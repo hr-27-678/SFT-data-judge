@@ -1,10 +1,10 @@
-# Evergreen v1 Cross-Version Scorer Comparison
+# Evergreen Cross-Version Scorer Comparison
 
 ## Report Metadata
 
 | Field | Value |
 | --- | --- |
-| Generated | 2026-05-07 23:26:40 UTC |
+| Generated | 2026-05-07 23:38:40 UTC |
 | Test set | `data\labeled\teacher_judge\evergreen_v2_merged_teacher_labels.jsonl` |
 | Records | 900 (clean 800 + flagged 100) |
 | LF source dir | `data\labeled\evergreen_lf_v2` |
@@ -16,13 +16,13 @@ Two ground-truth mappings are reported. Each scorer was originally trained
 with one of these mappings; both are reported here so cross-mapping
 comparisons are also possible.
 
-- **Conservative GT** (600 records): teacher score 1-2-3 -> not_keep, 4-5 -> keep.
-- **Confident GT** (556 records): teacher score 1-2 -> not_keep, 4-5 -> keep, score 3 (44 records) skipped.
+- **Conservative GT** (900 records): teacher score 1-2-3 -> not_keep, 4-5 -> keep.
+- **Confident GT** (828 records): teacher score 1-2 -> not_keep, 4-5 -> keep, score 3 (72 records) skipped.
 
 ## Stratum Definition
 
-- **Clean stratum** (500 records): cot_zh 300, finetome 125, openmath_reasoning 75.
-- **Flagged stratum** (100 records): cot_zh 40, finetome 60. duplicate_pair flag excluded.
+- **Clean stratum** (800 records): cot_zh 500, finetome 225, openmath_reasoning 75.
+- **Flagged stratum** (100 records): cot_zh 40, finetome 60.
 
 Primary metric: **Not-keep recall**. Higher = scorer correctly rejects more poor samples.
 

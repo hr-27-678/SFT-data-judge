@@ -1,15 +1,21 @@
-"""Evaluate all current scorer adapters on the 600-record evergreen test set.
+"""Evaluate all current scorer adapters on an evergreen test set.
 
 Reads the merged evergreen labels (teacher ground truth) and one prediction
 JSONL per adapter, joins by `id`, and produces a single markdown report with:
 
-- Conservative GT (600 records, score 3 -> not_keep)
-- Confident GT (556 records, score 3 skipped)
-- Each GT split into clean stratum (500) and flagged stratum (100)
+- Conservative GT (all records, score 3 -> not_keep)
+- Confident GT (score 3 skipped)
+- Each GT split into clean stratum and flagged stratum
 - Per source breakdown for the clean stratum
 
-Predictions are produced by `scripts/12_infer_binary_scorer.py`. This script
-only does the aggregation; it does not load any model.
+All sizes (total, clean, flagged, per-source, score-3 count) are derived
+from the candidates and labels files passed via --candidates / --labels.
+The same script handles evergreen v1 (600), evergreen v2 (900), and any
+future version.
+
+Predictions are produced by `scripts/12_infer_binary_scorer.py` (id-keyed)
+or by LLaMA-Factory predict (joined by source order via --lf-source-dir).
+This script only does the aggregation; it does not load any model.
 """
 
 from __future__ import annotations
@@ -53,13 +59,13 @@ def parse_args() -> argparse.Namespace:
         "--candidates",
         type=Path,
         default=PROJECT_ROOT / "data" / "splits" / "teacher_judge" / "evergreen_test_merged_candidates.jsonl",
-        help="Merged candidates file (default: evergreen v1 600).",
+        help="Merged candidates file (default: evergreen v1, 600 records).",
     )
     p.add_argument(
         "--labels",
         type=Path,
         default=PROJECT_ROOT / "data" / "labeled" / "teacher_judge" / "evergreen_test_merged_teacher_labels.jsonl",
-        help="Merged teacher labels file (default: evergreen v1 600).",
+        help="Merged teacher labels file (default: evergreen v1, 600 records).",
     )
     return p.parse_args()
 
@@ -288,9 +294,26 @@ def main() -> None:
             fmt_pct(m.get("json_valid_rate")),
         ]
 
+    # Derive dynamic stratum / source counts for the report header so it
+    # reflects whichever evergreen version the run used (v1, v2, ...).
+    score_3_count = sum(1 for sid in candidates if score_by_id.get(sid) == 3)
+    confident_count = len(candidates) - score_3_count
+    clean_by_source: dict[str, int] = Counter(
+        candidates[sid].get("source", "") for sid in clean_ids
+    )
+    flagged_by_source: dict[str, int] = Counter(
+        candidates[sid].get("source", "") for sid in flagged_ids
+    )
+    clean_src_str = ", ".join(
+        f"{src} {clean_by_source[src]}" for src in sorted(clean_by_source) if clean_by_source[src]
+    ) or "n/a"
+    flagged_src_str = ", ".join(
+        f"{src} {flagged_by_source[src]}" for src in sorted(flagged_by_source) if flagged_by_source[src]
+    ) or "n/a"
+
     headers = ["Model", "N", "Accuracy", "Keep F1", "Not-keep F1", "Not-keep recall", "JSON valid"]
     lines = [
-        "# Evergreen v1 Cross-Version Scorer Comparison",
+        "# Evergreen Cross-Version Scorer Comparison",
         "",
         "## Report Metadata",
         "",
@@ -308,13 +331,13 @@ def main() -> None:
         "with one of these mappings; both are reported here so cross-mapping",
         "comparisons are also possible.",
         "",
-        "- **Conservative GT** (600 records): teacher score 1-2-3 -> not_keep, 4-5 -> keep.",
-        "- **Confident GT** (556 records): teacher score 1-2 -> not_keep, 4-5 -> keep, score 3 (44 records) skipped.",
+        f"- **Conservative GT** ({len(candidates)} records): teacher score 1-2-3 -> not_keep, 4-5 -> keep.",
+        f"- **Confident GT** ({confident_count} records): teacher score 1-2 -> not_keep, 4-5 -> keep, score 3 ({score_3_count} records) skipped.",
         "",
         "## Stratum Definition",
         "",
-        "- **Clean stratum** (500 records): cot_zh 300, finetome 125, openmath_reasoning 75.",
-        "- **Flagged stratum** (100 records): cot_zh 40, finetome 60. duplicate_pair flag excluded.",
+        f"- **Clean stratum** ({len(clean_ids)} records): {clean_src_str}.",
+        f"- **Flagged stratum** ({len(flagged_ids)} records): {flagged_src_str}.",
         "",
         "Primary metric: **Not-keep recall**. Higher = scorer correctly rejects more poor samples.",
     ]
