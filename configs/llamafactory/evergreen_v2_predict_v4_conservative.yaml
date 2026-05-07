@@ -1,0 +1,35 @@
+### model
+model_name_or_path: Qwen/Qwen3-8B
+adapter_name_or_path: C:\Users\haoran27\llamafactory_outputs\scorer_binary_v4_conservative_qwen3_8b_lora_e3
+trust_remote_code: true
+
+### method
+stage: sft
+do_predict: true
+finetuning_type: lora
+
+### dataset
+dataset_dir: \\ad.uillinois.edu\engr-ews\haoran27\微调\SFT-DataJudge\data\labeled\evergreen_lf_v2
+eval_dataset: evergreen_test_v2
+template: qwen3_nothink
+cutoff_len: 4096
+overwrite_cache: true
+preprocessing_num_workers: 16
+dataloader_num_workers: 0
+
+### output
+output_dir: C:\Users\haoran27\llamafactory_outputs\scorer_binary_v4_conservative_qwen3_8b_lora_e3_predict_evergreen_v2
+overwrite_output_dir: true
+report_to: none
+
+### eval
+per_device_eval_batch_size: 1
+predict_with_generate: true
+bf16: true
+ddp_timeout: 180000000
+
+### generation
+do_sample: false
+temperature: 1.0
+top_p: 1.0
+max_new_tokens: 64

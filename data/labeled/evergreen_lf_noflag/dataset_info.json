@@ -1,0 +1,11 @@
+{
+  "evergreen_test_noflag": {
+    "file_name": "evergreen_test.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  }
+}

@@ -39,6 +39,28 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     p.add_argument("--metrics", type=Path, default=DEFAULT_METRICS)
+    p.add_argument(
+        "--lf-source-dir",
+        type=Path,
+        default=PROJECT_ROOT / "data" / "labeled" / "evergreen_lf",
+        help=(
+            "Directory containing the LF-format evergreen source jsonl. "
+            "Use data/labeled/evergreen_lf_noflag for prompt-ablation eval, "
+            "or data/labeled/evergreen_lf_v2{,_noflag} for evergreen v2."
+        ),
+    )
+    p.add_argument(
+        "--candidates",
+        type=Path,
+        default=PROJECT_ROOT / "data" / "splits" / "teacher_judge" / "evergreen_test_merged_candidates.jsonl",
+        help="Merged candidates file (default: evergreen v1 600).",
+    )
+    p.add_argument(
+        "--labels",
+        type=Path,
+        default=PROJECT_ROOT / "data" / "labeled" / "teacher_judge" / "evergreen_test_merged_teacher_labels.jsonl",
+        help="Merged teacher labels file (default: evergreen v1 600).",
+    )
     return p.parse_args()
 
 
@@ -115,27 +137,32 @@ def compute_metrics(pairs: list[tuple[str, str]]) -> dict[str, Any]:
 
 def main() -> None:
     args = parse_args()
-    labels = {r["id"]: r for r in read_jsonl(LABELS_PATH)}
-    lock = json.loads(LOCK_PATH.read_text(encoding="utf-8"))
+    labels = {r["id"]: r for r in read_jsonl(args.labels)}
 
-    strata_ids = {name: set(ids) for name, ids in lock["ids_by_stratum"].items()}
-    clean_ids = strata_ids["clean_v1"] | strata_ids["clean_supplement"]
-    flagged_ids = strata_ids["flagged"]
+    # Derive strata directly from candidates (clean = is_clean True, flagged
+    # = is_clean False). This is robust against lock-file schema changes and
+    # works for any evergreen version. The merged candidates file is the
+    # canonical source of which records are in this eval.
+    candidates = {r["id"]: r for r in read_jsonl(args.candidates)}
+    clean_ids: set[str] = {sid for sid, rec in candidates.items() if rec.get("is_clean")}
+    flagged_ids: set[str] = {sid for sid, rec in candidates.items() if not rec.get("is_clean")}
 
-    # Build per-id ground truth scores
+    # Build per-id ground truth scores. Source taken from candidates if
+    # missing on the label record (some legacy label files do not carry it).
     score_by_id: dict[str, int] = {}
     source_by_id: dict[str, str] = {}
-    for sid, rec in labels.items():
+    for sid in candidates:
+        rec = labels.get(sid, {})
         teacher_label = rec.get("teacher_label") or {}
         score_by_id[sid] = teacher_label.get("overall_score")
-        source_by_id[sid] = rec.get("source", "")
+        source_by_id[sid] = rec.get("source") or candidates[sid].get("source", "")
 
     # Parse --predictions args. Two supported formats:
     #   1. name:path_to_script12_jsonl (each line has 'id' and 'verdict')
     #   2. name:path_to_llamafactory_generated_predictions.jsonl (each line
     #      has 'predict' but no id; we join by line index against the LF
     #      evergreen dataset that preserves _evergreen_id in source order)
-    lf_source_path = PROJECT_ROOT / "data" / "labeled" / "evergreen_lf" / "evergreen_test.jsonl"
+    lf_source_path = args.lf_source_dir / "evergreen_test.jsonl"
     lf_source_ids: list[str] = []
     lf_source_signatures: list[str] = []
     if lf_source_path.exists():
@@ -269,9 +296,9 @@ def main() -> None:
         "",
         md_table(["Field", "Value"], [
             ["Generated", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")],
-            ["Test set", f"`{LABELS_PATH.relative_to(PROJECT_ROOT)}`"],
-            ["Records", f"600 (clean 500 + flagged 100)"],
-            ["Lock", f"`{LOCK_PATH.relative_to(PROJECT_ROOT)}`"],
+            ["Test set", f"`{args.labels.relative_to(PROJECT_ROOT) if args.labels.is_relative_to(PROJECT_ROOT) else args.labels}`"],
+            ["Records", f"{len(candidates)} (clean {len(clean_ids)} + flagged {len(flagged_ids)})"],
+            ["LF source dir", f"`{args.lf_source_dir.relative_to(PROJECT_ROOT) if args.lf_source_dir.is_relative_to(PROJECT_ROOT) else args.lf_source_dir}`"],
             ["Models compared", ", ".join(model_predictions.keys())],
         ]),
         "",

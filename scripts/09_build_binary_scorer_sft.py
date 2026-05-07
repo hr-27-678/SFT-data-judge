@@ -63,6 +63,15 @@ def parse_args() -> argparse.Namespace:
             f"Defaults to {DEFAULT_LOCKED_TEST_IDS} if that file exists."
         ),
     )
+    parser.add_argument(
+        "--no-rule-fields",
+        action="store_true",
+        help=(
+            "Strip rule_clean and rule_flags lines from the user prompt. "
+            "Use this to break the rule_clean=True -> keep shortcut documented "
+            "in reports/evergreen_cross_version_eval_report.md."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -129,35 +138,39 @@ def binary_verdict(score: int, mode: str) -> str | None:
     return None
 
 
-def build_user_prompt(candidate: dict[str, Any]) -> str:
+def build_user_prompt(candidate: dict[str, Any], no_rule_fields: bool = False) -> str:
     metadata = compact_metadata(candidate)
     metadata_text = json.dumps(metadata, ensure_ascii=False, sort_keys=True) if metadata else "{}"
     flags = candidate.get("flags") if isinstance(candidate.get("flags"), list) else []
     sampling = candidate.get("sampling") if isinstance(candidate.get("sampling"), dict) else {}
 
-    return "\n".join(
-        [
-            "Evaluate this supervised fine-tuning data sample as binary training data quality.",
-            "Return only the JSON binary label. Do not include markdown, explanation, or extra text.",
-            "",
-            f"source: {candidate.get('source', '')}",
-            f"language: {candidate.get('language', '')}",
-            f"task_type: {candidate.get('task_type', '')}",
+    lines = [
+        "Evaluate this supervised fine-tuning data sample as binary training data quality.",
+        "Return only the JSON binary label. Do not include markdown, explanation, or extra text.",
+        "",
+        f"source: {candidate.get('source', '')}",
+        f"language: {candidate.get('language', '')}",
+        f"task_type: {candidate.get('task_type', '')}",
+    ]
+    if not no_rule_fields:
+        lines.extend([
             f"rule_clean: {bool(candidate.get('is_clean'))}",
             f"rule_flags: {json.dumps(flags, ensure_ascii=False)}",
-            f"sampling: {json.dumps(sampling, ensure_ascii=False, sort_keys=True)}",
-            f"metadata: {metadata_text}",
-            "",
-            "instruction:",
-            str(candidate.get("instruction", "")),
-            "",
-            "output:",
-            str(candidate.get("output", "")),
-        ]
-    )
+        ])
+    lines.extend([
+        f"sampling: {json.dumps(sampling, ensure_ascii=False, sort_keys=True)}",
+        f"metadata: {metadata_text}",
+        "",
+        "instruction:",
+        str(candidate.get("instruction", "")),
+        "",
+        "output:",
+        str(candidate.get("output", "")),
+    ])
+    return "\n".join(lines)
 
 
-def build_sft_record(candidate: dict[str, Any], label_record: dict[str, Any], mode: str) -> dict[str, Any] | None:
+def build_sft_record(candidate: dict[str, Any], label_record: dict[str, Any], mode: str, no_rule_fields: bool = False) -> dict[str, Any] | None:
     label = label_record["teacher_label"]
     score = int(label["overall_score"])
     verdict = binary_verdict(score, mode)
@@ -165,7 +178,7 @@ def build_sft_record(candidate: dict[str, Any], label_record: dict[str, Any], mo
         return None
 
     return {
-        "instruction": build_user_prompt(candidate),
+        "instruction": build_user_prompt(candidate, no_rule_fields=no_rule_fields),
         "input": "",
         "output": json.dumps({"verdict": verdict}, ensure_ascii=False),
         "system": BINARY_SYSTEM,
@@ -345,7 +358,7 @@ def main() -> None:
             skipped.append({"key": key, "reason": "; ".join(errors)})
             continue
 
-        sft_record = build_sft_record(candidate, label_record, args.mode)
+        sft_record = build_sft_record(candidate, label_record, args.mode, no_rule_fields=args.no_rule_fields)
         if sft_record is None:
             skipped.append({"key": key, "reason": "score_3_skipped"})
             continue

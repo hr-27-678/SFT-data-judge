@@ -759,3 +759,4 @@ balance、dedupe、固定 held-out 对比和少量正常样本校准。
 8. 当前模型适合辅助筛选，不适合盲目删除。
 9. 每个实验都要记录 config、数据版本、输出目录、best checkpoint 和指标。
 10. 后续最重要的是形成 scorer -> sample hard cases -> teacher relabel -> retrain 的闭环。
+

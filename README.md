@@ -6,21 +6,40 @@ distilling labels from a stronger teacher model.
 
 ## Current Status
 
-Last updated: 2026-05-06
+Last updated: 2026-05-08
 
-### Headline finding from the evergreen cross-version evaluation
+### Headline findings
 
-The locked 264-record in-domain test heavily overstates real-world reject
-ability. On the 600-record evergreen baseline (a fresh, distribution-realistic
-test set never used for any scorer's training), the same v3 conservative
-adapter that scored 77% not-keep recall on its in-domain test drops to
-**10% not-keep recall on clean records** and 50% on flagged records. Four of
-six existing scorers collapse to predicting `keep` for every clean sample.
+**1. In-domain test severely overstated reject ability.** On the 600-record
+evergreen v1 baseline (2026-05-06), v3 conservative dropped from 77%
+not-keep recall on its in-domain test to **10% not-keep recall on clean
+records**. Four of six existing scorers collapsed to predicting `keep`
+for every clean sample.
 
-Concrete interpretation: scorers learned a shortcut "rule_clean=True ->
-keep" and rarely override it. Discrimination on flagged records is
-acceptable; discrimination inside the clean stratum is the next thing v4 must
-fix.
+**2. The "rule_clean shortcut" hypothesis was tested and rejected.** A
+no-flag-prompt ablation (2026-05-07) ran the same 6 adapters on a
+prompt-stripped variant of evergreen. If the adapters truly relied on
+rule_clean, recall should have crashed; instead it moved within ±5pp
+and slightly *up* in 4 of 6 cases. The actual root cause is **training-
+data composition**: the active-learning loop produced very few
+"clean + drop" examples, so models never learned that class exists.
+Removing rule_flag from the prompt cannot fix what training never
+contained.
+
+**3. The v4 intervention is data-driven.** v4 adds three new batches:
+v2active002 (2,361, active learning), v4_random_supplement (999, random
+clean from production distribution), v4_cot_zh_short_clean (300,
+worst sub-slice). The v4 conservative training set has keep:not_keep =
+1.12:1 (vs v3's ~1.7:1) and ~2,950 not_keep records (vs v3's ~1,150).
+
+**4. Evergreen v2 (2026-05-08).** The 600-record evergreen v1 was
+extended with 300 fresh cot_zh + finetome clean records, raising
+per-source not_keep support to cot_zh 184, finetome 53, openmath 9.
+Cross-version evaluation against v2 is the new standard.
+
+**5. v4 conservative trained (2026-05-08).** Predict + aggregate jobs
+in flight. v4 confident training pending. See "Best Next Action" in
+[PROJECT_PLAN.md](PROJECT_PLAN.md).
 
 ### Current best candidates
 
@@ -67,20 +86,26 @@ Local adapters (not in git):
 
 - `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v3_conservative_qwen3_8b_lora_e3`
 - `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v3_confident_qwen3_8b_lora_e3`
+- `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v4_conservative_qwen3_8b_lora_e3` (trained 2026-05-08)
 
-### Active-learning loop status (2026-05-06)
+### Active-learning loop status (2026-05-08)
 
-- Both v3 scorers were run on a fresh 5,000-record unlabeled pool drawn from
-  the 188K processed pool, with already-teacher-labeled ids excluded at
-  sampling time and zero overlap with the locked test set.
-- Agreement: 4,352 / 5,000 (87.04%); 648 disagreements.
-- The next teacher batch `v2active002` (2,365 records: 2,277 priority +
-  88 random calibration from `conf_keep__cons_keep`) was built and
-  DeepSeek labeling is in progress.
+- Both v3 scorers were run on a fresh 5,000-record unlabeled pool;
+  agreement 4,352 / 5,000 (87.04%), 648 disagreements.
+- `v2active002` (2,365 records, active-learning priority + 88
+  calibration) — **labeled** with DeepSeek. 2,361 valid labels after
+  dedup and JSON-parse failures.
+- `v4_random_supplement` (1,000, random clean from 188K, production
+  source ratio) — **labeled**. 999 valid labels. ~24% drop rate as
+  expected.
+- `v4_cot_zh_short_clean` (300, cot_zh-only short bucket) — **labeled**.
+  300 valid labels. ~49% drop rate (much higher than the 24% baseline,
+  confirming this sub-slice is the hardest).
+- `evergreen_clean_expansion` (300, cot_zh + finetome clean fresh) —
+  **labeled** and merged into evergreen v2.
+- Cumulative teacher-labeled records for v4 training: 4,985 train +
+  637 valid + 626 test = 6,248 (conservative variant).
 - Pool report: `reports/v3_unlabeled_pool_5000_model_agreement_report.md`.
-- Once `v2active002` finishes labeling, decide whether to add a random clean
-  supplement before training v4 (see "v4 Strategy Decision" in
-  `PROJECT_PLAN.md`); then build v4 binary datasets and retrain.
 
 ### Test set comparability — resolved with evergreen baseline
 
@@ -210,17 +235,15 @@ The scorer training set grows incrementally. Each version adds a new
 teacher-label batch on top of the previous version's data. Full descriptions
 in `PROJECT_PLAN.md` under "Data Versions".
 
-| Version trained | Batch added | Records | How it was built |
+| Version trained | Batches added | Records | How it was built |
 | --- | --- | ---: | --- |
 | v1 | starter (`teacher_labels_1000`) | 1,000 | Source-stratified random sample, 80/20 clean/flagged, length-bucketed. Foundation. |
-| v2 | targeted (`targeted_1200_teacher_labels`) | 1,200 | Hand-curated targeted batch focused on v1 weak/boundary areas. |
-| v3 | `v2active001` | 388 | First active-learning batch. Model disagreements + both_not_keep + flagged_but_keep on a 3,600 pool, deduped against existing labels. |
-| v4 (in progress) | `v2active002` | 2,365 | Second active-learning batch, on a 5,000 pool pre-filtered to exclude labeled ids. Includes 88 random calibration samples for silent-error detection. |
+| v2 | + targeted (`targeted_1200_teacher_labels`) | 1,200 | Hand-curated targeted batch focused on v1 weak/boundary areas. |
+| v3 | + `v2active001` | 388 | First active-learning batch. Model disagreements + both_not_keep + flagged_but_keep on a 3,600 pool, deduped against existing labels. |
+| v4 (cons trained 2026-05-08) | + `v2active002` + `v4_random_supplement` + `v4_cot_zh_short_clean` | 2,365 + 1,000 + 300 | Second active-learning batch (priority + 88 calibration); plus random clean from production distribution to break the "clean+drop" gap; plus targeted cot_zh short bucket (the worst sub-slice on evergreen v1). |
 
 Naming note: `v2active001` / `v2active002` are legacy prefixes from when v2
-was the latest scorer; they are batch labels, not scorer versions. A planned
-rename to `v1_data` / `v2_data` / `v3_data` / `v4_data` is queued for after
-v2active002 finishes labeling.
+was the latest scorer; they are batch labels, not scorer versions.
 
 Each version's binary scorer dataset is built by
 `scripts/09_build_binary_scorer_sft.py` from the cumulative batches:
@@ -229,7 +252,14 @@ Each version's binary scorer dataset is built by
 - v2 binary conservative / confident: starter + targeted.
 - v3 binary conservative / confident: starter + targeted + v2active001.
 - v4 binary conservative / confident: starter + targeted + v2active001 +
-  v2active002 (planned).
+  v2active002 + v4_random_supplement + v4_cot_zh_short_clean.
+
+v4 dataset shape:
+
+| Dataset | Records | Train | Valid | Test | Keep | Not-keep | Score 3 Policy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `scorer_binary_v4_conservative` | 6,248 | 4,985 | 637 | 626 | 3,296 | 2,952 | mapped to `not_keep` |
+| `scorer_binary_v4_confident` | 5,562 | 4,444 | 567 | 551 | 3,296 | 2,266 | skipped |
 
 ## Repository Layout
 
@@ -266,12 +296,19 @@ Most JSONL data and model outputs are generated artifacts and are ignored by
 15. Build v3 binary scorer datasets from starter + targeted + `v2active001`.
 16. Train/evaluate Qwen3-8B v3 conservative and confident variants.
 17. Run both v3 scorers on a 5,000-record unlabeled pool, build the
-    agreement report, and produce the `v2active002` teacher batch
-    (2,365 records, includes 88 random calibration samples).
-18. (in progress) DeepSeek-label `v2active002`.
-19. Next: build v4 binary datasets and train Qwen3-8B v4 conservative/
-    confident; rerun v1/v2 adapters on the locked test set for a clean
-    cross-version comparison.
+    agreement report, and produce the `v2active002` teacher batch.
+18. Build the 600-record evergreen v1 baseline (locked); evaluate all 6
+    historical adapters on it. Headline finding: in-domain test
+    overstated reject ability; clean-stratum recall collapsed to 0-10%.
+19. Run prompt-ablation evaluation (no-flag prompt) to test the
+    rule_clean shortcut hypothesis. Result: rejected. Data composition,
+    not prompt form, is the gap.
+20. Sample and label `v4_random_supplement` (1,000 random clean from
+    188K) and `v4_cot_zh_short_clean` (300 worst-slice supplement).
+21. Build evergreen v2 (900 records = v1 600 + 300 fresh clean
+    expansion) and 12 v2 predict configs.
+22. Build v4 binary datasets and train Qwen3-8B v4 conservative
+    (2026-05-08). v4 confident training and all v4 evals pending.
 
 ## Key Reports
 
