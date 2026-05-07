@@ -1,6 +1,6 @@
 # Project Plan
 
-Last updated: 2026-05-05
+Last updated: 2026-05-06
 
 ## Resume Here
 
@@ -32,6 +32,8 @@ Recommended reading order for a fresh session:
 15. `reports/teacher_candidates_all_v2_priority_teacher_analysis_report.md`
 16. `reports/teacher_sampling_v2_active_pilot_001_report.md`
 17. `reports/teacher_sampling_targeted_1200_report.md`
+18. `reports/v3_unlabeled_pool_5000_model_agreement_report.md`
+19. `reports/teacher_sampling_v2_active_pilot_002_report.md`
 
 The school computer does not preserve conversation progress, so this file should
 be treated as the project memory.
@@ -72,6 +74,19 @@ The project has completed one full starter loop:
 21. prepared Qwen3-8B v3 conservative/confident LLaMA-Factory training configs
     and matching greedy valid/test prediction configs
 22. trained and evaluated both Qwen3-8B v3 scorer variants
+23. ran both v3 scorers over a fresh 5,000-record unlabeled pool (excluded
+    already-teacher-labeled ids at sampling time, zero overlap with locked
+    test) and produced an agreement / priority queue report
+24. built the next active-learning teacher batch `v2active002` (2,365 records:
+    2,277 priority + 88 random calibration from `conf_keep__cons_keep`) and
+    started DeepSeek labeling on 2026-05-06
+25. built the 600-record evergreen baseline test set (500 clean + 100 flagged,
+    `duplicate_pair` excluded), labeled with DeepSeek, locked at
+    `data/eval/evergreen_test_ids.json`
+26. evaluated all six existing scorer adapters (v1 4B, v1 8B, v2 conservative,
+    v2 confident, v3 conservative, v3 confident) on the evergreen baseline
+    using LLaMA-Factory `qwen3_nothink` predict (the same pipeline used during
+    training); report at `reports/evergreen_cross_version_eval_report.md`
 
 The current best direction is the binary scorer family, not the original 1-5
 scorer.
@@ -135,6 +150,170 @@ greedy valid/test prediction:
   not_keep recall 53.66%.
 - Current report:
   `reports/scorer_binary_v3_qwen3_8b_experiment_report.md`.
+
+On 2026-05-06, both v3 scorers were run on a fresh 5,000-record unlabeled pool
+at `data/splits/teacher_judge/v3_unlabeled_pool_5000/teacher_candidates_all.jsonl`.
+The pool was sampled with `--exclude-label-files` covering all prior teacher
+labels (~2,588 ids) and verified to have zero overlap with the 264-id
+`data/eval/locked_test_ids.json`. Result: 4,352 / 5,000 (87.04%) agreement,
+648 disagreements. The agreement analysis script
+`scripts/15_analyze_v3_pool_agreement.py` produced the priority queue
+`data/scored/v3_unlabeled_pool_5000_teacher_review_priority.jsonl` (2,277
+priority records + 88 calibration random from `conf_keep__cons_keep`). Script
+13 then built `v2active002` (2,365 unique unlabeled candidates, 0 prior labels
+matched, 0 in-pool duplicates). DeepSeek labeling is in progress.
+
+## Test Set Comparability
+
+This is a known data-integrity caveat that affects all cross-version metric
+comparisons.
+
+| Variant | Test records | Source population | Locked? |
+| --- | ---: | --- | --- |
+| v1 4B confident | 96 | starter_1000 only | no |
+| v1 8B confident | 96 | starter_1000 only | no |
+| v2 conservative | 224 | starter + targeted | no |
+| v2 confident | 199 | starter + targeted (score 3 skipped) | no |
+| v3 conservative | 264 | starter + targeted + v2active001 | YES |
+| v3 confident | 237 | locked 264 minus 27 score-3 records | inherits subset of locked |
+
+Implications:
+
+- The 264-id locked test set was created on 2026-05-05 from
+  `scorer_binary_sft_v3/scorer_binary_v3_conservative_test.jsonl`. Forward of
+  v3, `scripts/09_build_binary_scorer_sft.py` enforces these ids stay in the
+  test split.
+- Pre-v3 metrics are on entirely different test populations than v3. Some
+  ids that were in the v1 or v2 test split may now be in v3 training data
+  because the lock only protects v3 forward.
+- v3 confident is evaluated on a subset of the locked 264 (the 27 score-3
+  records are skipped). When comparing v3 conservative to v3 confident,
+  remember that conservative's 264-record test includes 27 records that
+  confident never sees.
+- Important: simply rerunning v1/v2 adapters on `locked_test_ids.json`
+  produces biased numbers, because parts of the locked 264 ids were in v1
+  and/or v2 training data (forward locking does not fix backward leakage).
+  Direct cross-version comparison on the locked set is honest only for v3
+  forward (v3 vs v4 vs v5 ...).
+- Evergreen baseline test set (built 2026-05-06): 600 fresh records reserved
+  permanently for cross-version comparison. Lock file:
+  `data/eval/evergreen_test_ids.json`.
+  - Stratum 1 (clean v1, 200 records): `data/splits/teacher_judge/evergreen_test/`,
+    sampled from the 5,000 v3 unlabeled pool with source quotas
+    120/50/30 cot_zh/finetome/openmath, all `is_clean=True`.
+  - Stratum 2 (clean supplement, 300 records): merged into
+    `data/splits/teacher_judge/evergreen_test_extension/`, source quotas
+    180/75/45 to bring clean total to 500 (60/25/15 ratio).
+  - Stratum 3 (flagged, 100 records): merged into the same extension file,
+    sampled from the 188K processed pool minus all reservations, source
+    quotas 40/60 cot_zh/finetome (openmath has only 65 flagged total in
+    188K; not enough to stratify meaningfully).
+  - Lock enforced at three layers: (1) labels never passed to
+    `scripts/09_build_binary_scorer_sft.py` `--label-prefix`; (2) candidate
+    files added to `DEFAULT_EXCLUDE_LABEL_FILES` in
+    `scripts/02_sample_for_teacher.py`; (3) candidate files added to
+    `DEFAULT_KNOWN_LABEL_FILES` in `scripts/13_build_teacher_review_batch.py`.
+  - Resolved risk: `duplicate_pair` records have a content twin elsewhere
+    in their source dataset; if a twin is in training, the evergreen score
+    is contaminated. Fix applied 2026-05-06: the flagged stratum was
+    resampled with `--exclude-flag duplicate_pair`. Final flag distribution
+    on the 100 flagged records is 98 short_output + 1 short_instruction +
+    1 possible_mojibake. Contamination risk is now negligible.
+  - Known caveat (accepted, not fixed): clean stratum was sampled from the
+    5,000 active-learning pool (which itself was source x length stratified
+    from the 188K processed pool), while the flagged stratum was sampled
+    directly from the 188K pool without length stratification. The 5,000
+    pool is itself a stratified snapshot of 188K, so this asymmetry is
+    second-order and does not affect cross-version comparison validity.
+    Report the clean 500 and flagged 100 as two separate tables (not a
+    weighted mean), and the asymmetry is irrelevant.
+
+## Evergreen Cross-Version Evaluation (2026-05-06)
+
+All six existing scorer adapters were evaluated on the 600-record evergreen
+test set using the same LLaMA-Factory `qwen3_nothink` predict pipeline that
+was used during training. (An earlier attempt to use
+`scripts/12_infer_binary_scorer.py` produced wrong numbers because it used
+the HuggingFace tokenizer's default chat template instead of the
+`qwen3_nothink` template the scorers were trained on. That attempt was
+discarded; do not reproduce it.)
+
+Predict configs (one per adapter):
+`configs/llamafactory/evergreen_predict_*.yaml`. Each config copies the
+canonical LLaMA-Factory predict template and overrides only `dataset_dir`,
+`eval_dataset`, `output_dir`. Aggregated by `scripts/17_evaluate_on_evergreen.py`,
+which joins LF `generated_predictions.jsonl` to the evergreen LF source by
+order, with first/middle/last record signature verification to catch any
+order shuffling.
+
+Headline result (Conservative GT, score 1-2-3 -> not_keep):
+
+| Model | Clean accuracy | Clean not-keep recall | Flagged accuracy | Flagged not-keep recall |
+| --- | ---: | ---: | ---: | ---: |
+| v3 conservative | 77.00% | **10.08%** | 79.00% | **50.00%** |
+| v3 confident | 76.20% | 0.00% | 76.00% | 17.86% |
+| v2 conservative | 76.20% | 0.00% | 75.00% | 21.43% |
+| v2 confident | 76.20% | 0.00% | 76.00% | 17.86% |
+| v1 8B confident | 76.00% | 0.00% | 76.00% | 39.29% |
+| v1 4B confident | 72.60% | **20.17%** | 74.00% | 42.86% |
+
+(Full report including Confident GT and per-source breakdowns:
+`reports/evergreen_cross_version_eval_report.md`. Metrics JSON:
+`data/eval/evergreen_cross_version_eval_metrics.json`.)
+
+Findings:
+
+1. In-domain test severely overstated reject ability. v3 conservative's 77%
+   not-keep recall on its own 264-record test drops to 10.08% on the
+   evergreen clean stratum.
+2. Four of six scorers predict `not_keep` zero times on the clean stratum
+   (v3 confident, v2 conservative, v2 confident, v1 8B confident). They
+   collapsed to an "all keep" output on rule_clean records.
+3. Flagged stratum discrimination is acceptable across the board (17-50%
+   not-keep recall). Scorers learned to lean on the rule_flag signal as the
+   primary discriminator and to skip discrimination on rule_clean records.
+4. v1 4B is the only baseline that meaningfully discriminates inside the
+   clean stratum (20.17% not-keep recall). Hypothesis: smaller capacity
+   blocked the rule-flag shortcut from fully forming during fine-tuning.
+5. v3 conservative is still the best balanced scorer overall: highest reject
+   on flagged (50%), second-highest reject on clean (10%), and the only 8B
+   adapter doing any reject on clean.
+6. openmath_reasoning is a near-zero-reject case for every scorer. True
+   not_keep rate is ~12% on clean openmath, so the cost of all-keep is
+   small, but no scorer rejects any openmath sample.
+
+## Data Versions
+
+The scorer training set is built incrementally. Each version adds a new
+batch of teacher labels to the previous version's data.
+
+| Version trained | Batch added | Records | Sampling method | Notes |
+| --- | --- | ---: | --- | --- |
+| v1 | starter (`teacher_labels_1000`) | 1,000 | Source-stratified random from 188K (cot_zh / finetome / openmath_reasoning), 80% clean / 20% flagged, length-bucketed (short / medium / long). Seed 42. | Foundation. Used by every later version. |
+| v2 | targeted (`targeted_1200_teacher_labels`) | 1,200 | Hand-curated targeted batch focused on v1 weak/boundary areas (sources, lengths, and rule flags where v1 was unreliable). Built by `scripts/11_build_targeted_teacher_batch.py`. | First non-active-learning expansion. Helped v2 reject boundary not move much beyond v1's compact baseline. |
+| v3 | `v2active001` | 388 | First active-learning batch. Built by running v2 conservative + v2 confident on a 3,600-record candidate pool, computing a priority queue (model disagreements + both_not_keep + flagged_but_keep), then deduplicating against existing teacher labels. The pool was not pre-filtered for already-labeled ids, so the priority queue lost 827 of 1,215 records to dedup. | Small batch but high signal: each record was a confirmed boundary case the v2 scorers wanted teacher review on. |
+| v4 (in progress) | `v2active002` | 2,365 | Second active-learning batch. Same priority logic as v2active001 but on a fresh 5,000-record pool that was pre-filtered to exclude all teacher-labeled ids at sampling time, so 0 records lost to dedup. Includes 88 random calibration samples drawn from `conf_keep__cons_keep` (records both v3 scorers say keep) to detect silent agreement errors that the priority logic would miss. | Roughly 6x the size of v2active001 because the input pool was larger (5K vs 3.6K) and properly deduplicated. DeepSeek labeling 2026-05-06+. |
+
+Naming note: the legacy prefix `v2active` was chosen when v2 was the latest
+scorer family. It has stuck even though v2active002 was built using v3
+scorers and feeds v4 training. Treat the prefix as an opaque batch label
+unrelated to the scorer it was selected with. A planned rename to
+`v1_data` / `v2_data` / `v3_data` / `v4_data` is queued for after
+v2active002 finishes labeling, to avoid disrupting the active write.
+
+Each version's binary scorer dataset is built by
+`scripts/09_build_binary_scorer_sft.py` from these batches plus the
+locked test ids reservation:
+
+- v1 binary confident: starter only.
+- v2 binary conservative / confident: starter + targeted.
+- v3 binary conservative / confident: starter + targeted + v2active001.
+- v4 binary conservative / confident: starter + targeted + v2active001 +
+  v2active002 (planned).
+
+Evergreen test ids and locked test ids are excluded from every training set
+by enforcement in `scripts/02_sample_for_teacher.py` (default exclude list)
+and `scripts/13_build_teacher_review_batch.py` (default known label files).
 
 ## Status Board
 
@@ -211,12 +390,65 @@ Current companion candidate:
   conservative. Disagreements between the two v3 8B models are useful
   teacher-relabeling candidates.
 
-Best next action:
+Best next action (2026-05-06):
 
-- Run both v3 scorers on a larger unlabeled pool, exclude all already
-  teacher-labeled original sample `id`s, then build the next active-learning
-  teacher batch from v3 disagreements, conservative `not_keep` predictions,
-  and rule/model conflicts.
+Evergreen evaluation is now complete and exposed a structural weakness in
+the active-learning loop: scorers learned a "rule_clean=True -> keep"
+shortcut and barely discriminate inside the clean stratum (0-10% not_keep
+recall on clean 500, vs 50% on flagged 100). The v4 plan needs an
+intervention to fix this; see "v4 strategy decision" below before training.
+
+Mechanical work, in order:
+
+1. Wait for `v2active002` DeepSeek labeling to finish (2,365 records). After
+   the rename pause, resume with `--resume`.
+2. Run `scripts/05_analyze_teacher_labels.py` on the resulting label file
+   and inspect the 88 calibration_random records specifically: count how
+   many teacher-labeled them `drop` or `maybe`. That count is the v3 scorer's
+   silent false-positive rate on rule_clean records.
+3. Decide the v4 sampling strategy (see "v4 strategy decision" below).
+4. Once v4 dataset composition is locked, build v4 binary scorer datasets
+   from the chosen batches using `scripts/09_build_binary_scorer_sft.py`.
+5. Train Qwen3-8B v4 conservative and confident variants under the existing
+   v3 LoRA configs (only swap dataset names and output dirs).
+6. Evaluate v4 on BOTH locked test (264) AND evergreen (600). The headline
+   metric is v4's clean stratum not_keep recall on evergreen; that is the
+   number that needs to move materially upward.
+
+## v4 Strategy Decision
+
+The current `v2active002` batch (2,365 records) was selected on the same
+priority criteria as `v2active001`: model disagreements, both_not_keep, and
+flagged_but_model_keep. Plus 88 random calibration records from
+`conf_keep__cons_keep`.
+
+Evergreen evaluation showed the priority signals are over-indexed on rule-
+flagged boundary cases. Inside the clean stratum (where production-time
+filtering matters most), the scorer needs more "clean records that look
+keep but are actually drop" to break the rule_clean shortcut. The 88
+calibration records partly address this, but at ~24% expected drop rate
+they only contribute ~21 hard negatives — small relative to the rest of
+v4 (2,277 priority records skewed toward flagged content).
+
+Three options for v4 (see end of `evergreen_cross_version_eval_report.md`
+discussion in the README for the diagnostic context):
+
+- **A. Train v4 on `v2active002` as-is.** No additional sampling. Fastest
+  path. Risk: v4's clean-stratum reject ability may not improve materially
+  over v3.
+- **B. Add a random clean supplement to v4 before training.** Sample 500
+  fresh clean records from the 188K pool (excluding labeled + evergreen +
+  locked), label with DeepSeek (~30 min, <$3), add to v4 training set. At
+  ~24% drop rate this contributes ~120 hard negatives directly aimed at
+  the rule_clean shortcut. Recommended.
+- **C. Restructure `v2active002` itself.** Drop the priority-skewed records
+  in favor of more random clean. Wasteful given labeling is ~half done.
+  Not recommended.
+
+The recommended default is B. Decision is open until v2active002 labeling
+finishes and the calibration_random subset gives a concrete estimate of
+the silent error rate. If the calibration confirms >15% silent drop rate
+on rule_clean, B becomes a strong default.
 
 ## Goal
 
@@ -246,8 +478,11 @@ prioritize future SFT data at lower cost.
 14. Build and label the deduplicated active-learning batch `v2active001`.
 15. Build v3 binary datasets from starter + targeted + `v2active001`.
 16. Train and evaluate Qwen3-8B v3 conservative/confident variants.
-17. Next: run v3 scorer inference on a larger unlabeled pool and build
-    `v2active002`/next teacher-review batch.
+17. Run both v3 scorers on a 5,000-record unlabeled pool, build the
+    agreement / priority queue, and produce the `v2active002` teacher batch.
+18. (in progress) DeepSeek-label `v2active002` (2,365 records).
+19. Next: build v4 binary datasets from starter + targeted + v2active001 +
+    v2active002 and train Qwen3-8B v4 conservative/confident.
 
 ## Data Sources
 

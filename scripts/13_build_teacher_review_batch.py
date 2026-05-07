@@ -28,6 +28,12 @@ DEFAULT_KNOWN_LABEL_FILES = [
     PROJECT_ROOT / "data" / "labeled" / "teacher_judge" / "teacher_labels_1000.jsonl",
     PROJECT_ROOT / "data" / "labeled" / "teacher_judge" / "targeted_1200_teacher_labels.jsonl",
     PROJECT_ROOT / "data" / "labeled" / "teacher_judge" / "v2active001" / "v2active001_teacher_labels.jsonl",
+    # v2active002 candidates (in-progress labeling): exclude by candidate id
+    # since the label file may not exist yet during incremental runs.
+    PROJECT_ROOT / "data" / "splits" / "teacher_judge" / "v2_active_pilot_002" / "v2active002_teacher_candidates_all.jsonl",
+    # Evergreen baseline test ids must NEVER enter active-learning batches.
+    PROJECT_ROOT / "data" / "splits" / "teacher_judge" / "evergreen_test" / "teacher_candidates_all.jsonl",
+    PROJECT_ROOT / "data" / "splits" / "teacher_judge" / "evergreen_test_extension" / "teacher_candidates_all.jsonl",
 ]
 
 SPLITS = ["train", "valid", "test"]

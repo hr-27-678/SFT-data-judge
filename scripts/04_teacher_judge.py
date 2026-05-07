@@ -129,11 +129,27 @@ def extract_json_object(text: str) -> dict[str, Any]:
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        start = text.find("{")
-        end = text.rfind("}")
-        if start == -1 or end == -1 or end <= start:
-            raise
-        return json.loads(text[start : end + 1])
+        pass
+
+    start = text.find("{")
+    if start == -1:
+        raise json.JSONDecodeError("no JSON object found", text, 0)
+
+    # Decode just the first complete JSON object, ignoring any trailing
+    # text or additional objects the teacher may have produced.
+    decoder = json.JSONDecoder()
+    try:
+        obj, _ = decoder.raw_decode(text[start:])
+        if isinstance(obj, dict):
+            return obj
+    except json.JSONDecodeError:
+        pass
+
+    # Last-resort fallback: original "first { to last }" slice.
+    end = text.rfind("}")
+    if end <= start:
+        raise json.JSONDecodeError("could not isolate JSON object", text, start)
+    return json.loads(text[start : end + 1])
 
 
 def validate_label(label: dict[str, Any]) -> list[str]:
@@ -261,9 +277,14 @@ def main() -> None:
             output_record = {**base, "teacher_label": label, "raw_teacher_response": raw, "validation_errors": errors}
             status = "ok" if not errors else "schema_error"
             print(f"[{index + 1}/{len(records)}] labeled {record.get('source')} {record.get('id')} {status}", flush=True)
-        except (RuntimeError, urllib.error.URLError, json.JSONDecodeError, KeyError) as exc:
-            output_record = {**base, "teacher_label": None, "raw_teacher_response": None, "validation_errors": [str(exc)]}
-            print(f"[{index + 1}/{len(records)}] failed {record.get('source')} {record.get('id')}: {exc}", flush=True)
+        except Exception as exc:
+            # Catch all per-record failures (network glitches, SSL/socket
+            # errors, partial reads, JSON parse, schema mismatch, etc.) so
+            # the long-running batch job records the failure and continues
+            # instead of crashing. KeyboardInterrupt is BaseException, not
+            # caught here — Ctrl+C still exits cleanly.
+            output_record = {**base, "teacher_label": None, "raw_teacher_response": None, "validation_errors": [f"{type(exc).__name__}: {exc}"]}
+            print(f"[{index + 1}/{len(records)}] failed {record.get('source')} {record.get('id')}: {type(exc).__name__}: {exc}", flush=True)
 
         append_jsonl(output_path, output_record)
         written += 1

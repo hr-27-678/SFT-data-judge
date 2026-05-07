@@ -8,10 +8,17 @@
     "base_url": "TEACHER_BASE_URL",
     "model": "TEACHER_MODEL"
   },
+  "active_provider": {
+    "name": "deepseek",
+    "base_url": "https://api.deepseek.com/v1",
+    "model": "deepseek-v4-flash",
+    "set_via": "manual `$env:` assignments in current PowerShell session"
+  },
   "pilot_first": true,
   "notes": [
     "Run dry-run first to inspect rendered prompts.",
     "Run real labeling only after prompt and sample sanity checks.",
-    "The full 3600-candidate set should be labeled after pilot validation."
+    "The full 3600-candidate set should be labeled after pilot validation.",
+    "API key must NOT be committed; the helper script prompts for it at runtime."
   ]
 }
