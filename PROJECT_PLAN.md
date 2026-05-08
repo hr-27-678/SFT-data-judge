@@ -1,1483 +1,287 @@
 # Project Plan
 
-Last updated: 2026-05-09
-
-## Resume Here
-
-This is the first file a future Codex session should read.
-
-Current repository:
-
-- Local path: `\\ad.uillinois.edu\engr-ews\haoran27\微调\SFT-DataJudge`
-- GitHub: `https://github.com/hr-27-678/SFT-data-judge.git`
-- Branch: `main`
-- Initial pushed commit: `7b701c6 Initial project cleanup and scorer reports`
-
-Recommended reading order for a fresh session:
-
-1. `PROJECT_PLAN.md`
-2. `PROJECT_FILE_INVENTORY.md`
-3. `reports/README.md`
-4. `scripts/README.md`
-5. `reports/scorer_binary_experiment_report.md`
-6. `reports/scorer_binary_v2_conservative_qwen3_8b_experiment_report.md`
-7. `reports/scorer_binary_v2_confident_qwen3_8b_experiment_report.md`
-8. `reports/teacher_candidates_all_v2_model_agreement_report.md`
-9. `reports/training_lessons_and_notes.md`
-10. `reports/scorer_binary_v3_qwen3_8b_experiment_report.md`
-11. `reports/scorer_binary_v3_conservative_eval_test_report.md`
-12. `reports/scorer_binary_v3_confident_eval_test_report.md`
-13. `data/labeled/scorer_binary_sft_v3/scorer_binary_v3_conservative_report.md`
-14. `data/labeled/scorer_binary_sft_v3/scorer_binary_v3_confident_report.md`
-15. `reports/teacher_candidates_all_v2_priority_teacher_analysis_report.md`
-16. `reports/teacher_sampling_v2_active_pilot_001_report.md`
-17. `reports/teacher_sampling_targeted_1200_report.md`
-18. `reports/v3_unlabeled_pool_5000_model_agreement_report.md`
-19. `reports/teacher_sampling_v2_active_pilot_002_report.md`
-20. `reports/evergreen_cross_version_eval_report.md`
-21. `reports/evergreen_noflag_cross_version_eval_report.md`
-22. `data/labeled/scorer_binary_sft_v4/scorer_binary_v4_conservative_report.md`
-23. `data/labeled/scorer_binary_sft_v4/scorer_binary_v4_confident_report.md`
-24. `reports/evergreen_v2_cross_version_eval_report.md` (will exist after v4 evals aggregate)
-25. `reports/evergreen_v2_noflag_cross_version_eval_report.md` (will exist after v4 evals aggregate)
-
-The school computer does not preserve conversation progress, so this file should
-be treated as the project memory.
-
-Sections most relevant for understanding the current research trajectory:
-
-- **Project Context** — establishes this is portfolio / interview-prep,
-  why teacher agreement is the legitimate success metric, and why
-  industrial framings ("65% bad data through!") do not transfer.
-- **Evergreen No-Flag Ablation Eval (2026-05-07)** — the experiment that
-  ruled out prompt-form as the lever and pointed to data composition.
-- **v4 Strategy Decision** — what is going into v4 and why, plus the
-  expected-recall tier table to read v4 results against.
-- **v5 Strategy: Synthetic Hard-Negative Distillation** — the planned
-  next-phase technique once v4 is benchmarked.
-
-## Current State Snapshot
-
-The project has completed one full starter loop:
-
-1. sampled 1,000 teacher-label candidates
-2. labeled them with the teacher model
-3. built original 1-5 scorer SFT data
-4. trained a Qwen3-4B LoRA scorer
-5. evaluated valid/test behavior
-6. found that the 1-5 score task was too fuzzy around score 3 / `maybe`
-7. rebuilt a binary confident dataset
-8. trained and evaluated the binary confident scorer
-9. organized project files and pushed the current repo to GitHub
-10. trained and evaluated a Qwen3-8B v1 capacity-check scorer on the same
-    binary confident dataset
-11. labeled the targeted 1,200-example teacher batch
-12. merged starter + targeted labels into v2 binary scorer datasets
-13. trained and evaluated the Qwen3-8B v2 conservative scorer
-14. standardized all markdown reports under `reports/` with consistent
-    metadata/context headers and common section names
-15. implemented `scripts/12_infer_binary_scorer.py` for batch scorer inference
-    on unlabeled JSONL pools with resume support and summary reporting
-16. trained and evaluated the Qwen3-8B v2 confident ablation
-17. ran both Qwen3-8B v2 scorers on the 3,600-row teacher-candidate pool and
-    built a conservative/confident agreement report plus a teacher-review
-    priority queue
-18. implemented `scripts/13_build_teacher_review_batch.py` and built the first
-    deduplicated active-learning teacher batch, `v2active001`
-19. analyzed `v2active001` labels and joined all available teacher labels back
-    to the 1,215-record priority queue with
-    `scripts/14_analyze_teacher_review_priority.py`
-20. built v3 binary scorer datasets from starter + targeted + `v2active001`
-    teacher labels
-21. prepared Qwen3-8B v3 conservative/confident LLaMA-Factory training configs
-    and matching greedy valid/test prediction configs
-22. trained and evaluated both Qwen3-8B v3 scorer variants
-23. ran both v3 scorers over a fresh 5,000-record unlabeled pool (excluded
-    already-teacher-labeled ids at sampling time, zero overlap with locked
-    test) and produced an agreement / priority queue report
-24. built the next active-learning teacher batch `v2active002` (2,365 records:
-    2,277 priority + 88 random calibration from `conf_keep__cons_keep`) and
-    started DeepSeek labeling on 2026-05-06
-25. built the 600-record evergreen baseline test set (500 clean + 100 flagged,
-    `duplicate_pair` excluded), labeled with DeepSeek, locked at
-    `data/eval/evergreen_test_ids.json`
-26. evaluated all six existing scorer adapters (v1 4B, v1 8B, v2 conservative,
-    v2 confident, v3 conservative, v3 confident) on the evergreen baseline
-    using LLaMA-Factory `qwen3_nothink` predict (the same pipeline used during
-    training); report at `reports/evergreen_cross_version_eval_report.md`
-27. added `--no-rule-fields` support to `scripts/09_build_binary_scorer_sft.py`
-    and parameterized `scripts/17_evaluate_on_evergreen.py` with
-    `--lf-source-dir`, so prompt-ablation evaluation reuses the same
-    aggregator
-28. wrote `scripts/22_build_evergreen_noflag_lf_dataset.py` and 6 LF predict
-    YAML configs (`configs/llamafactory/evergreen_noflag_predict_*.yaml`),
-    plus `scripts/run_all_evergreen_noflag_inferences.ps1`; ran all 6
-    existing scorer adapters on the rule-flag-stripped evergreen prompt;
-    report at `reports/evergreen_noflag_cross_version_eval_report.md` and
-    metrics at `data/eval/evergreen_noflag_cross_version_eval_metrics.json`
-29. wrote `scripts/21_sample_evergreen_clean_expansion.py` (samples
-    cot_zh 200 + finetome 100 fresh clean records to enlarge per-source
-    not_keep support on the next evergreen revision); 300 candidates ready
-    at `data/splits/teacher_judge/evergreen_clean_expansion/teacher_candidates_all.jsonl`,
-    teacher labeling not yet started
-30. wrote `scripts/23_sample_evergreen_human_verify.py` (samples 50
-    evergreen records, 30 cot_zh / 15 finetome / 5 openmath, with the
-    DeepSeek teacher labels printed alongside) into
-    `data/eval/evergreen_human_verify/{sample.jsonl, annotation.md}`;
-    user-driven manual annotation in progress
-31. wrote `scripts/19_sample_v4_random_supplement.py` and
-    `scripts/20_sample_cot_zh_short_clean.py`; teacher labeling on three
-    v4 input batches in progress (see Status Board)
-32. drafted `configs/llamafactory/scorer_binary_v3_conservative_noflag_qwen3_8b_lora_*.yaml`
-    (training + valid/test/evergreen-noflag predict) for the controlled
-    no-rule-fields retrain of v3 conservative; not yet trained.
-    Decision (2026-05-07): retrain deprioritized — the inference-only
-    ablation showed prompt-form effect is small; v4 data composition is
-    the higher-value lever
-33. labeled the evergreen_clean_expansion batch (300 fresh clean records)
-    with DeepSeek; per-source drop rates were higher than expected:
-    cot_zh 49% (vs predicted 24%), finetome 29%
-34. wrote `scripts/24_merge_evergreen_v2.py` and built evergreen v2 (900
-    records = v1 600 + expansion 300). Outputs:
-    `data/splits/teacher_judge/evergreen_v2_merged_candidates.jsonl`,
-    `data/labeled/teacher_judge/evergreen_v2_merged_teacher_labels.jsonl`,
-    `data/eval/evergreen_v2_test_ids.json`,
-    `data/labeled/evergreen_lf_v2/`,
-    `data/labeled/evergreen_lf_v2_noflag/`. Per-source clean not_keep
-    support: cot_zh 184 (was 86), finetome 53 (was 24), openmath 9
-    (unchanged, still under-supported)
-35. wrote `scripts/25_generate_evergreen_v2_predict_configs.py`,
-    auto-generated 12 v2 predict YAMLs (6 flagged + 6 noflag) plus
-    `scripts/run_all_evergreen_v2_inferences.ps1`. Modified `scripts/17`
-    to accept `--candidates` and `--labels` overrides so the same
-    aggregator handles v1 and v2
-36. v3/v2/v1 inference on evergreen v2 in progress at end of day
-    2026-05-07: 7 of 12 done (all 6 flagged + 1 noflag). 5 noflag predicts
-    were interrupted by the v4 training run on 2026-05-08 and are pending
-    (v3_confident, v2_conservative, v2_confident, v1_8B, v1_4B noflag)
-37. labeled all three v4 input batches with DeepSeek:
-    `v2active002` (2,361 valid / 2,365 candidates),
-    `v4_random_supplement` (999 valid / 1,000),
-    `v4_cot_zh_short_clean` (300 valid / 300). 5 records dropped across
-    batches due to non-recoverable JSON parse failures from teacher.
-    Drop rates by batch: v2active002 not yet computed; v4_random_supplement
-    ~24% (matches prediction); v4_cot_zh_short_clean ~49% (cot_zh short
-    is the hardest sub-slice as expected)
-38. wrote `scripts/26_prepare_v4_label_splits.py` to dedupe-and-split
-    monolithic teacher label files into `_train.jsonl` / `_valid.jsonl` /
-    `_test.jsonl`, assigning 80/10/10 splits deterministically by id hash
-    where the candidate file did not already carry split assignments.
-    Result: v2active002 1897/232/232, v4_random_supplement 788/109/102,
-    v4_cot_zh_short_clean 243/29/28
-39. built v4 binary scorer datasets via `scripts/09_build_binary_scorer_sft.py`
-    (no `--no-rule-fields`, prompt keeps rule_flag/rule_clean):
-    - `scorer_binary_v4_conservative` (mode=all): 4,985 train / 637 valid
-      / 626 test, keep:not_keep = **1.12:1**
-    - `scorer_binary_v4_confident` (mode=confident): 4,444 train / 567
-      valid / 551 test, keep:not_keep = 1.46:1
-    not_keep class went from ~1,150 records in v3 to ~2,950 in v4 (2.5x)
-40. wrote 10 v4 LLaMA-Factory configs:
-    - `scorer_binary_v4_conservative_qwen3_8b_lora_e3.yaml` (training)
-    - `scorer_binary_v4_conservative_qwen3_8b_lora_predict_{valid,test}.yaml`
-    - `scorer_binary_v4_confident_qwen3_8b_lora_e3.yaml` (training)
-    - `scorer_binary_v4_confident_qwen3_8b_lora_predict_{valid,test}.yaml`
-    - `evergreen_v2_predict_v4_{conservative,confident}.yaml`
-    - `evergreen_v2_noflag_predict_v4_{conservative,confident}.yaml`
-41. trained Qwen3-8B v4 conservative (936 steps = 3 epochs over 4,985
-    train records, ~2.5h). Adapter at
-    `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v4_conservative_qwen3_8b_lora_e3`.
-42. ran v4 conservative predict on evergreen v2 (flagged-prompt and
-    no-flag-prompt). Headline: clean stratum not_keep recall jumped
-    from v3's 10.08% (evergreen v1) to **36.18%** (evergreen v2),
-    landing in the lower half of the expected target tier (35-55%)
-    defined in v4 Strategy Decision. cot_zh clean recall went from
-    12.79% to 38.59%. Precision on clean stratum is 0.81 — when v4
-    says not_keep it is correct 81% of the time. Flagged stratum
-    recall under Conservative GT dropped from 50% to 32% (Confident
-    GT: 45%), consistent with the model being less reliant on
-    rule_flag as a discriminator. No-flag prompt produces nearly
-    identical numbers (within 1pp), reconfirming that data
-    composition, not prompt form, is the real lever. Reports:
-    `reports/evergreen_v2_v4_conservative_eval_report.md`,
-    `reports/evergreen_v2_noflag_v4_conservative_eval_report.md`.
-    v4 confident training and full cross-version aggregation pending
-
-The current best direction is the binary scorer family, not the original 1-5
-scorer.
-
-On 2026-05-02, the targeted teacher-labeling batch was completed with DeepSeek.
-Four initial API/parse failures were retried, then merged into the canonical
-`data/labeled/teacher_judge/targeted_1200_teacher_labels.jsonl`, giving
-1,200/1,200 valid teacher labels.
-
-On 2026-05-03, the Qwen3-8B v2 confident ablation was restarted from scratch
-with `overwrite_output_dir: true`, trained successfully, and evaluated on
-valid/test with greedy decoding. Treat the current local adapter as complete.
-
-On 2026-05-03, both Qwen3-8B v2 scorers were run on
-`data/splits/teacher_judge/teacher_candidates_all.jsonl` (3,600 records).
-They agreed on 3,327 / 3,600 records (92.42%) and disagreed on 273 records.
-The strongest teacher-labeling queue is the 273 disagreements plus the 646
-both-not-keep records, before expanding to the full 188,103-row processed pool.
-
-On 2026-05-04, the 1,215-record pilot priority queue was deduplicated against
-existing teacher labels using the original sample `id` only. Do not deduplicate
-across batches by `teacher_sample_id`; those ids can be reused by different
-sampling runs. The result:
-
-- 827 priority records already have teacher labels from the starter/targeted
-  batches.
-- 388 priority records were unlabeled at selection time and were written as
-  batch `v2active001`.
-- Dry-run teacher prompts were rendered to
-  `data/labeled/teacher_judge/v2active001/v2active001_teacher_prompts.jsonl`.
-
-After teacher labeling and retry, `v2active001` has 388 deduplicated valid
-labels. The raw output file has 390 rows because the two failed rows were
-retried with `--resume` and appended; downstream analysis keeps the last record
-per original sample `id`. The 1,215-record priority queue now has 1,215 valid
-teacher labels joined from starter, targeted, and `v2active001`; the current
-analysis report is
-`reports/teacher_candidates_all_v2_priority_teacher_analysis_report.md`.
-
-On 2026-05-04, v3 binary scorer datasets were generated in
-`data/labeled/scorer_binary_sft_v3/` from the starter, targeted, and
-`v2active001` teacher labels:
-
-- `scorer_binary_v3_conservative`: 2,588 total records, with score 3 mapped to
-  `not_keep` (train 2,057 / valid 267 / test 264).
-- `scorer_binary_v3_confident`: 2,326 total records, with score 3 skipped
-  (train 1,855 / valid 234 / test 237).
-- Both variants use the same binary prompt/schema as v2 and have
-  `dataset_info.json` entries ready for LLaMA-Factory.
-
-On 2026-05-05, both v3 Qwen3-8B LoRA variants were trained and evaluated with
-greedy valid/test prediction:
-
-- v3 conservative best checkpoint: `checkpoint-250`, best valid eval loss
-  `0.05724373087286949`.
-- v3 confident best checkpoint: `checkpoint-100`, best valid eval loss
-  `0.053558845072984695`.
-- v3 conservative test: accuracy 76.89%, keep F1 0.796, not_keep F1 0.734,
-  not_keep recall 77.06%.
-- v3 confident test: accuracy 78.90%, keep F1 0.851, not_keep F1 0.638,
-  not_keep recall 53.66%.
-- Current report:
-  `reports/scorer_binary_v3_qwen3_8b_experiment_report.md`.
-
-On 2026-05-06, both v3 scorers were run on a fresh 5,000-record unlabeled pool
-at `data/splits/teacher_judge/v3_unlabeled_pool_5000/teacher_candidates_all.jsonl`.
-The pool was sampled with `--exclude-label-files` covering all prior teacher
-labels (~2,588 ids) and verified to have zero overlap with the 264-id
-`data/eval/locked_test_ids.json`. Result: 4,352 / 5,000 (87.04%) agreement,
-648 disagreements. The agreement analysis script
-`scripts/15_analyze_v3_pool_agreement.py` produced the priority queue
-`data/scored/v3_unlabeled_pool_5000_teacher_review_priority.jsonl` (2,277
-priority records + 88 calibration random from `conf_keep__cons_keep`). Script
-13 then built `v2active002` (2,365 unique unlabeled candidates, 0 prior labels
-matched, 0 in-pool duplicates). DeepSeek labeling is in progress.
-
-## Test Set Comparability
-
-This is a known data-integrity caveat that affects all cross-version metric
-comparisons.
-
-| Variant | Test records | Source population | Locked? |
-| --- | ---: | --- | --- |
-| v1 4B confident | 96 | starter_1000 only | no |
-| v1 8B confident | 96 | starter_1000 only | no |
-| v2 conservative | 224 | starter + targeted | no |
-| v2 confident | 199 | starter + targeted (score 3 skipped) | no |
-| v3 conservative | 264 | starter + targeted + v2active001 | YES |
-| v3 confident | 237 | locked 264 minus 27 score-3 records | inherits subset of locked |
-
-Implications:
-
-- The 264-id locked test set was created on 2026-05-05 from
-  `scorer_binary_sft_v3/scorer_binary_v3_conservative_test.jsonl`. Forward of
-  v3, `scripts/09_build_binary_scorer_sft.py` enforces these ids stay in the
-  test split.
-- Pre-v3 metrics are on entirely different test populations than v3. Some
-  ids that were in the v1 or v2 test split may now be in v3 training data
-  because the lock only protects v3 forward.
-- v3 confident is evaluated on a subset of the locked 264 (the 27 score-3
-  records are skipped). When comparing v3 conservative to v3 confident,
-  remember that conservative's 264-record test includes 27 records that
-  confident never sees.
-- Important: simply rerunning v1/v2 adapters on `locked_test_ids.json`
-  produces biased numbers, because parts of the locked 264 ids were in v1
-  and/or v2 training data (forward locking does not fix backward leakage).
-  Direct cross-version comparison on the locked set is honest only for v3
-  forward (v3 vs v4 vs v5 ...).
-- Evergreen baseline test set (built 2026-05-06): 600 fresh records reserved
-  permanently for cross-version comparison. Lock file:
-  `data/eval/evergreen_test_ids.json`.
-  - Stratum 1 (clean v1, 200 records): `data/splits/teacher_judge/evergreen_test/`,
-    sampled from the 5,000 v3 unlabeled pool with source quotas
-    120/50/30 cot_zh/finetome/openmath, all `is_clean=True`.
-  - Stratum 2 (clean supplement, 300 records): merged into
-    `data/splits/teacher_judge/evergreen_test_extension/`, source quotas
-    180/75/45 to bring clean total to 500 (60/25/15 ratio).
-  - Stratum 3 (flagged, 100 records): merged into the same extension file,
-    sampled from the 188K processed pool minus all reservations, source
-    quotas 40/60 cot_zh/finetome (openmath has only 65 flagged total in
-    188K; not enough to stratify meaningfully).
-  - Lock enforced at three layers: (1) labels never passed to
-    `scripts/09_build_binary_scorer_sft.py` `--label-prefix`; (2) candidate
-    files added to `DEFAULT_EXCLUDE_LABEL_FILES` in
-    `scripts/02_sample_for_teacher.py`; (3) candidate files added to
-    `DEFAULT_KNOWN_LABEL_FILES` in `scripts/13_build_teacher_review_batch.py`.
-  - Resolved risk: `duplicate_pair` records have a content twin elsewhere
-    in their source dataset; if a twin is in training, the evergreen score
-    is contaminated. Fix applied 2026-05-06: the flagged stratum was
-    resampled with `--exclude-flag duplicate_pair`. Final flag distribution
-    on the 100 flagged records is 98 short_output + 1 short_instruction +
-    1 possible_mojibake. Contamination risk is now negligible.
-  - Known caveat (accepted, not fixed): clean stratum was sampled from the
-    5,000 active-learning pool (which itself was source x length stratified
-    from the 188K processed pool), while the flagged stratum was sampled
-    directly from the 188K pool without length stratification. The 5,000
-    pool is itself a stratified snapshot of 188K, so this asymmetry is
-    second-order and does not affect cross-version comparison validity.
-    Report the clean 500 and flagged 100 as two separate tables (not a
-    weighted mean), and the asymmetry is irrelevant.
-
-## Evergreen Cross-Version Evaluation (2026-05-06)
-
-All six existing scorer adapters were evaluated on the 600-record evergreen
-test set using the same LLaMA-Factory `qwen3_nothink` predict pipeline that
-was used during training. (An earlier attempt to use
-`scripts/12_infer_binary_scorer.py` produced wrong numbers because it used
-the HuggingFace tokenizer's default chat template instead of the
-`qwen3_nothink` template the scorers were trained on. That attempt was
-discarded; do not reproduce it.)
-
-Predict configs (one per adapter):
-`configs/llamafactory/evergreen_predict_*.yaml`. Each config copies the
-canonical LLaMA-Factory predict template and overrides only `dataset_dir`,
-`eval_dataset`, `output_dir`. Aggregated by `scripts/17_evaluate_on_evergreen.py`,
-which joins LF `generated_predictions.jsonl` to the evergreen LF source by
-order, with first/middle/last record signature verification to catch any
-order shuffling.
-
-Headline result (Conservative GT, score 1-2-3 -> not_keep):
-
-| Model | Clean accuracy | Clean not-keep recall | Flagged accuracy | Flagged not-keep recall |
-| --- | ---: | ---: | ---: | ---: |
-| v3 conservative | 77.00% | **10.08%** | 79.00% | **50.00%** |
-| v3 confident | 76.20% | 0.00% | 76.00% | 17.86% |
-| v2 conservative | 76.20% | 0.00% | 75.00% | 21.43% |
-| v2 confident | 76.20% | 0.00% | 76.00% | 17.86% |
-| v1 8B confident | 76.00% | 0.00% | 76.00% | 39.29% |
-| v1 4B confident | 72.60% | **20.17%** | 74.00% | 42.86% |
-
-(Full report including Confident GT and per-source breakdowns:
-`reports/evergreen_cross_version_eval_report.md`. Metrics JSON:
-`data/eval/evergreen_cross_version_eval_metrics.json`.)
-
-Findings:
-
-1. In-domain test severely overstated reject ability. v3 conservative's 77%
-   not-keep recall on its own 264-record test drops to 10.08% on the
-   evergreen clean stratum.
-2. Four of six scorers predict `not_keep` zero times on the clean stratum
-   (v3 confident, v2 conservative, v2 confident, v1 8B confident). They
-   collapsed to an "all keep" output on rule_clean records.
-3. Flagged stratum discrimination is acceptable across the board (17-50%
-   not-keep recall). Scorers learned to lean on the rule_flag signal as the
-   primary discriminator and to skip discrimination on rule_clean records.
-4. v1 4B is the only baseline that meaningfully discriminates inside the
-   clean stratum (20.17% not-keep recall). Hypothesis: smaller capacity
-   blocked the rule-flag shortcut from fully forming during fine-tuning.
-5. v3 conservative is still the best balanced scorer overall: highest reject
-   on flagged (50%), second-highest reject on clean (10%), and the only 8B
-   adapter doing any reject on clean.
-6. openmath_reasoning is a near-zero-reject case for every scorer. True
-   not_keep rate is ~12% on clean openmath, so the cost of all-keep is
-   small, but no scorer rejects any openmath sample.
-
-## Evergreen No-Flag Ablation Eval (2026-05-07)
-
-The 2026-05-06 evergreen results suggested all 8B scorers had collapsed
-to a "rule_clean=True -> keep" shortcut (0% not_keep recall on clean
-stratum for 4 of 6 adapters). To test that hypothesis, the same 6
-adapters were rerun on a prompt-stripped variant of the 600-record
-evergreen set. The variant removes `rule_clean:` and `rule_flags:` lines
-from the user prompt while leaving everything else identical (same LF
-`qwen3_nothink` template, same merged candidates, same teacher labels).
-
-Build: `scripts/22_build_evergreen_noflag_lf_dataset.py` writes
-`data/labeled/evergreen_lf_noflag/evergreen_test.jsonl` (registered as LF
-dataset `evergreen_test_noflag`). Predict configs are
-`configs/llamafactory/evergreen_noflag_predict_*.yaml`; aggregation reuses
-`scripts/17_evaluate_on_evergreen.py` with `--lf-source-dir
-data/labeled/evergreen_lf_noflag`. Full report:
-`reports/evergreen_noflag_cross_version_eval_report.md`.
-
-Headline result (Conservative GT, score 1-2-3 -> not_keep, clean stratum
-not_keep recall):
-
-| Model | Original prompt | No-flag prompt | Δ |
-| --- | ---: | ---: | ---: |
-| v3 conservative | 10.08% | 12.61% | +2.5pp |
-| v3 confident | 0.00% | 0.00% | 0 |
-| v2 conservative | 0.00% | 0.84% | +0.8pp |
-| v2 confident | 0.00% | 0.00% | 0 |
-| v1 8B confident | 0.00% | 1.68% | +1.7pp |
-| v1 4B confident | 20.17% | 24.37% | +4.2pp |
-
-Findings:
-
-1. **The rule_clean shortcut hypothesis is not confirmed.** If the
-   adapters were truly using rule_clean as their decision driver,
-   stripping it should crash clean-stratum recall (the signal is gone,
-   the model would have nothing to fall back on). Instead, recall went
-   slightly *up* in 4 of 6 cases. Accuracy moved within ±0.6pp.
-2. **The four collapsed adapters stayed collapsed.** v3 confident, v2
-   conservative, v2 confident, and v1 8B confident still produce ~0%
-   not_keep on clean. They never learned to discriminate inside clean
-   records during training because their training data lacked enough
-   "clean but actually drop" examples. Removing rule_flag from the
-   prompt cannot fix what the training set never contained.
-3. **Flagged stratum modestly improved on the no-flag prompt for 3
-   adapters** (v3 confident 17.86 -> 28.57, v2 conservative 21.43 ->
-   28.57, v2 confident 17.86 -> 21.43). Most likely cause: the original
-   prompt encoded specific rule_flag string values (e.g.
-   `["short_output"]`) that the adapters latched onto as literal
-   features. Stripping them forced fall-back to instruction/output
-   content, which generalizes slightly better on flagged content.
-   Effect size is small (3-10pp), not structural.
-4. **openmath clean is unevaluable.** Only 9 true negatives in the
-   stratum; every adapter scores 0% not_keep recall, original or
-   stripped. Evergreen v2 must enlarge or drop the openmath clean slice.
-
-Implication for v4: **the lever is data composition, not prompt form.**
-The 2026-05-06 v4 plan correctly identified the need for a random clean
-supplement; the no-flag finding reinforces that as the primary path. The
-v3 conservative no-flag retrain (training + inference both stripped)
-remains worth running as a controlled ablation, but its purpose is now
-to bound the prompt-form contribution at small (~1-5pp), not to be a
-candidate v4 production prompt.
-
-## Data Versions
-
-The scorer training set is built incrementally. Each version adds a new
-batch of teacher labels to the previous version's data.
-
-| Version trained | Batch added | Records | Sampling method | Notes |
-| --- | --- | ---: | --- | --- |
-| v1 | starter (`teacher_labels_1000`) | 1,000 | Source-stratified random from 188K (cot_zh / finetome / openmath_reasoning), 80% clean / 20% flagged, length-bucketed (short / medium / long). Seed 42. | Foundation. Used by every later version. |
-| v2 | targeted (`targeted_1200_teacher_labels`) | 1,200 | Hand-curated targeted batch focused on v1 weak/boundary areas (sources, lengths, and rule flags where v1 was unreliable). Built by `scripts/11_build_targeted_teacher_batch.py`. | First non-active-learning expansion. Helped v2 reject boundary not move much beyond v1's compact baseline. |
-| v3 | `v2active001` | 388 | First active-learning batch. Built by running v2 conservative + v2 confident on a 3,600-record candidate pool, computing a priority queue (model disagreements + both_not_keep + flagged_but_keep), then deduplicating against existing teacher labels. The pool was not pre-filtered for already-labeled ids, so the priority queue lost 827 of 1,215 records to dedup. | Small batch but high signal: each record was a confirmed boundary case the v2 scorers wanted teacher review on. |
-| v4 (in progress) | `v2active002` | 2,365 | Second active-learning batch. Same priority logic as v2active001 but on a fresh 5,000-record pool that was pre-filtered to exclude all teacher-labeled ids at sampling time, so 0 records lost to dedup. Includes 88 random calibration samples drawn from `conf_keep__cons_keep` (records both v3 scorers say keep) to detect silent agreement errors that the priority logic would miss. | Roughly 6x the size of v2active001 because the input pool was larger (5K vs 3.6K) and properly deduplicated. DeepSeek labeling 2026-05-06+. |
-
-Naming note: the legacy prefix `v2active` was chosen when v2 was the latest
-scorer family. It has stuck even though v2active002 was built using v3
-scorers and feeds v4 training. Treat the prefix as an opaque batch label
-unrelated to the scorer it was selected with. A planned rename to
-`v1_data` / `v2_data` / `v3_data` / `v4_data` is queued for after
-v2active002 finishes labeling, to avoid disrupting the active write.
-
-Each version's binary scorer dataset is built by
-`scripts/09_build_binary_scorer_sft.py` from these batches plus the
-locked test ids reservation:
-
-- v1 binary confident: starter only.
-- v2 binary conservative / confident: starter + targeted.
-- v3 binary conservative / confident: starter + targeted + v2active001.
-- v4 binary conservative / confident: starter + targeted + v2active001 +
-  v2active002 (planned).
-
-Evergreen test ids and locked test ids are excluded from every training set
-by enforcement in `scripts/02_sample_for_teacher.py` (default exclude list)
-and `scripts/13_build_teacher_review_batch.py` (default known label files).
-
-## Status Board
-
-Completed and usable:
-
-- Qwen3-4B v1 binary confident baseline.
-- Qwen3-8B v1 binary confident capacity check.
-- Targeted 1,200 DeepSeek teacher labels.
-- V2 binary scorer datasets:
-  - `scorer_binary_v2_confident`
-  - `scorer_binary_v2_conservative`
-- Qwen3-8B v2 conservative training, valid/test prediction, evaluation, and
-  experiment report.
-- Qwen3-8B v2 confident training, valid/test prediction, evaluation, and
-  experiment report.
-- Batch inference script:
-  `scripts/12_infer_binary_scorer.py`
-- Active-learning teacher batch script:
-  `scripts/13_build_teacher_review_batch.py`
-- Priority teacher analysis script:
-  `scripts/14_analyze_teacher_review_priority.py`
-- 3,600-row teacher-candidate pilot inference with both Qwen3-8B v2 adapters:
-  - `reports/teacher_candidates_all_v2_conservative_inference_report.md`
-  - `reports/teacher_candidates_all_v2_confident_inference_report.md`
-  - `reports/teacher_candidates_all_v2_model_agreement_report.md`
-  - `data/scored/teacher_candidates_all_v2_teacher_review_priority.jsonl`
-  - `data/scored/teacher_candidates_all_v2_teacher_review_top919.jsonl`
-  - `data/labeled/teacher_judge/v2_pilot_top919/v2_pilot_top919_teacher_prompts.jsonl`
-- Deduplicated first active-learning teacher batch:
-  - `reports/teacher_sampling_v2_active_pilot_001_report.md`
-  - `reports/teacher_label_report_v2active001.md`
-  - `reports/teacher_candidates_all_v2_priority_teacher_analysis_report.md`
-  - `data/splits/teacher_judge/v2_active_pilot_001/v2active001_teacher_candidates_all.jsonl`
-  - `data/labeled/teacher_judge/v2active001/v2active001_teacher_prompts.jsonl`
-- V3 binary scorer datasets:
-  - `data/labeled/scorer_binary_sft_v3/scorer_binary_v3_conservative_report.md`
-  - `data/labeled/scorer_binary_sft_v3/scorer_binary_v3_confident_report.md`
-  - `data/labeled/scorer_binary_sft_v3/dataset_info.json`
-- V3 Qwen3-8B LLaMA-Factory configs:
-  - `configs/llamafactory/scorer_binary_v3_conservative_qwen3_8b_lora_e3.yaml`
-  - `configs/llamafactory/scorer_binary_v3_conservative_qwen3_8b_lora_predict_valid.yaml`
-  - `configs/llamafactory/scorer_binary_v3_conservative_qwen3_8b_lora_predict_test.yaml`
-  - `configs/llamafactory/scorer_binary_v3_confident_qwen3_8b_lora_e3.yaml`
-  - `configs/llamafactory/scorer_binary_v3_confident_qwen3_8b_lora_predict_valid.yaml`
-  - `configs/llamafactory/scorer_binary_v3_confident_qwen3_8b_lora_predict_test.yaml`
-- Qwen3-8B v3 conservative/confident training, valid/test prediction,
-  evaluation, and experiment report:
-  - `reports/scorer_binary_v3_qwen3_8b_experiment_report.md`
-  - `reports/scorer_binary_v3_conservative_eval_valid_report.md`
-  - `reports/scorer_binary_v3_conservative_eval_test_report.md`
-  - `reports/scorer_binary_v3_confident_eval_valid_report.md`
-  - `reports/scorer_binary_v3_confident_eval_test_report.md`
-  - `data/eval/scorer_binary_v3_conservative_eval_valid_metrics.json`
-  - `data/eval/scorer_binary_v3_conservative_eval_test_metrics.json`
-  - `data/eval/scorer_binary_v3_confident_eval_valid_metrics.json`
-  - `data/eval/scorer_binary_v3_confident_eval_test_metrics.json`
-- Training lessons note:
-  `reports/training_lessons_and_notes.md`
-
-Current main candidate:
-
-- `Qwen/Qwen3-8B` LoRA on `scorer_binary_v3_conservative`
-- Local adapter:
-  `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v3_conservative_qwen3_8b_lora_e3`
-- Use it for prioritization, review routing, and selecting teacher relabeling
-  candidates. Do not use it for blind automatic deletion.
-
-Current companion candidate:
-
-- `Qwen/Qwen3-8B` LoRA on `scorer_binary_v3_confident`
-- Local adapter:
-  `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v3_confident_qwen3_8b_lora_e3`
-- Use it as a high-confidence keep filter and as a contrast model against v3
-  conservative. Disagreements between the two v3 8B models are useful
-  teacher-relabeling candidates.
-
-Best next action (2026-05-09):
-
-v4 conservative trained AND evaluated on evergreen v2; result lands
-in the "Expected target" tier (35-55% clean recall). The method is
-validated. Remaining work is mostly bookkeeping: locked-test predict
-for v4 cons, full cross-version aggregation table, and the v4
-confident counterpart. After that, branch decision: v5 synthetic
-distillation (smaller iteration), or Phase E downstream SFT
-validation (bigger demonstration), or both.
-
-In-flight status (as of 2026-05-08):
-
-Teacher labeling — all v4 input batches and evergreen expansion are
-**complete**:
-
-| Batch | Final valid labels | Use |
-| --- | ---: | --- |
-| v2active002 | 2,361 / 2,365 | v4 training |
-| v4_random_supplement | 999 / 1,000 | v4 training |
-| v4_cot_zh_short_clean | 300 / 300 | v4 training |
-| evergreen_clean_expansion | 300 / 300 | merged into evergreen v2 |
-| Human verification | user-driven 50 | teacher quality sanity check |
-
-Training and inference jobs:
-
-| Job | Status |
-| --- | --- |
-| v4 conservative training (Qwen3-8B LoRA) | done (2.5h, 2026-05-08) |
-| v4 cons predict on evergreen v2 flagged | done (2026-05-09); recall 36.18% |
-| v4 cons predict on evergreen v2 no-flag | done (2026-05-09); recall 36.18% |
-| v4 cons predict on locked test (valid/test) | pending |
-| v4 confident training | pending (~5h) |
-| v4 conf predict on valid/test/evergreen v2 (flagged+noflag) | pending |
-| Historical v3/v2/v1 evergreen v2 predict (12 jobs) | 7 / 12 done; 5 noflag remain (v3_conf, v2_cons, v2_conf, v1_8B, v1_4B) |
-| Final cross-version aggregation (8 adapters x 2 prompt forms) | pending |
-
-Mechanical work, in order:
-
-1. **Run v4 cons evergreen v2 predict (flagged + noflag, 2 jobs).** This
-   produces the headline numbers. Configs:
-   `configs/llamafactory/evergreen_v2_predict_v4_conservative.yaml`,
-   `configs/llamafactory/evergreen_v2_noflag_predict_v4_conservative.yaml`.
-2. **Run v4 cons valid/test predict (2 jobs)** for in-domain comparison
-   against v3 cons on locked test.
-3. **Run the 5 missing historical noflag predicts** (v3_conf, v2_cons,
-   v2_conf, v1_8B, v1_4B) so the cross-version table is complete on both
-   prompt forms.
-4. **Train v4 confident** (~5h GPU). Then 4 predicts (valid, test,
-   evergreen v2 flagged, evergreen v2 noflag).
-5. **Aggregate** with `scripts/17_evaluate_on_evergreen.py`. Two reports:
-   - `reports/evergreen_v2_cross_version_eval_report.md` (flagged prompt)
-   - `reports/evergreen_v2_noflag_cross_version_eval_report.md` (noflag prompt)
-   Both should compare 8 adapters: v1 4B, v1 8B, v2 cons, v2 conf,
-   v3 cons, v3 conf, v4 cons, v4 conf.
-6. **Read against the expected-recall tier table** (see "v4 Strategy
-   Decision"). The headline number is v4 cons evergreen v2 clean cot_zh
-   not_keep recall. If 35-55% (target tier), method is validated;
-   proceed to Phase E or v5. If 20-35%, consider v5 synthetic distill.
-   If < 20%, diagnose before any further training.
-7. **Deferred**: v3 cons noflag retrain. Decision (2026-05-07): not on
-   critical path; the inference-only ablation already bounded the
-   prompt-form effect at 1-5pp. May still run later as a controlled
-   side experiment if v4 results raise specific questions about the
-   training-time prompt effect.
-
-## v4 Strategy Decision
-
-The current `v2active002` batch (2,365 records) was selected on the same
-priority criteria as `v2active001`: model disagreements, both_not_keep, and
-flagged_but_model_keep. Plus 88 random calibration records from
-`conf_keep__cons_keep`.
-
-Evergreen evaluation showed the priority signals are over-indexed on rule-
-flagged boundary cases. Inside the clean stratum, the scorer needs more
-"clean records that look keep but are actually drop" examples in
-training. The 2026-05-07 no-flag ablation (see section above) confirmed
-that adding such hard clean negatives is the actual lever; changing the
-prompt is at best a 1-5pp side effect.
-
-**Decision (2026-05-07): Option B + targeted cot_zh supplement.**
-
-v4 training data composition:
-
-- starter (1,000)
-- targeted (1,200)
-- v2active001 (388)
-- v2active002 (2,365 - in progress, ~89% labeled)
-- v4_random_supplement (1,000 - in progress, ~34% labeled): production-
-  ratio random clean from the 188K pool. At ~24% drop rate, contributes
-  ~240 fresh hard clean negatives. Built by
-  `scripts/19_sample_v4_random_supplement.py`.
-- v4_cot_zh_short_clean (300 - in progress, ~97% labeled): cot_zh-only
-  short-bucket clean from 188K. cot_zh is the weakest source on
-  evergreen and short cot_zh has the highest expected drop rate. Built
-  by `scripts/20_sample_cot_zh_short_clean.py`.
-
-Total v4 raw labels: ~6,253 records. Built by
-`scripts/09_build_binary_scorer_sft.py` with the same `--label-prefix`
-mechanism; both confident and conservative v4 datasets are planned.
-
-Discarded options for the record:
-
-- **A. Train v4 on `v2active002` as-is.** Rejected: priority-only
-  selection cannot fix the clean-stratum gap.
-- **C. Restructure `v2active002`.** Rejected: labeling already deep, not
-  worth the rebuild.
-- **Default-to-noflag prompt.** Rejected by the 2026-05-07 ablation: the
-  effect is too small to be the main intervention. v4 will keep the
-  rule_flag prompt fields. The v3 conservative noflag retrain remains
-  queued as a controlled side experiment, not a v4 candidate.
-
-Hard-negative supply for v4 (key intuition):
-
-| Source | Records | Expected hard negatives |
-| --- | ---: | ---: |
-| v4_random_supplement (random clean from 188K) | 1,000 | ~240 (24% rate) |
-| v4_cot_zh_short_clean (worst sub-slice) | 300 | ~90 (~30% rate, short cot_zh) |
-| v2active002 calibration_random subset | 88 | ~21 |
-| **Total fresh hard negatives in v4 vs v3** | | **~350** |
-
-In v3 training data, the count of "rule_clean=True AND teacher_drop"
-records is roughly 50 (mostly leaking through the active-learning
-priority queue, not deliberately sampled). v4 takes that to ~400, an
-8x increase. Going from "this class barely exists in training" to
-"this class has 400 examples" is a discrete step, not a marginal one.
-
-Expected v4 evergreen clean stratum not_keep recall:
-
-| Tier | v4 evergreen clean recall (cot_zh) | Interpretation |
-| --- | ---: | --- |
-| Failure | < 20% | Method needs rethinking; v4 supplements did not move the needle. |
-| Weak progress | 20-35% | Direction confirmed; another active-learning round needed before Phase E. |
-| **Expected target** | **35-55%** | **Method validated; ready for Phase E or v5 polish.** |
-| Strong | 55-70% | Beyond reasonable expectation; double-check evaluation integrity. |
-| Suspicious | > 70% | Likely evaluation contamination or shared bias between train and teacher. |
-
-The 0% -> first-positive transition is the steepest part of the curve.
-The same data delta that lifts a model from 0% to 25% will not lift it
-from 25% to 70% — the latter requires content-judgment maturity beyond
-just "this class exists in training."
-
-## v4 Conservative Evergreen v2 Result (2026-05-09)
-
-v4 conservative was evaluated on evergreen v2 (900 records) with both
-the flagged prompt and the no-flag prompt. The headline numbers:
-
-| Metric | v3 cons (evergreen v1, 600) | v4 cons (evergreen v2, 900) | Δ |
-| --- | ---: | ---: | ---: |
-| Clean not_keep recall | 10.08% | **36.18%** | **3.6x** |
-| Clean cot_zh recall | 12.79% | **38.59%** | **3.0x** |
-| Clean finetome recall | 4.17% | **33.96%** | 8x |
-| Clean not_keep precision | ~0.60 | **0.81** | +21pp |
-| Flagged not_keep recall (Conservative GT) | 50.00% | 32.14% | -18pp |
-| Flagged not_keep recall (Confident GT) | 50.00% | 45.00% | -5pp |
-| Flagged not_keep precision | 0.67 | **0.90** | +23pp |
-
-Caveat: v3 ran on evergreen v1 (500 clean), v4 ran on evergreen v2
-(800 clean). The v2 expansion records have a higher real drop rate
-than v1, so direct numerical comparison is rough; the order-of-
-magnitude improvement is still clearly real, but a strict apples-to-
-apples comparison requires re-running v3 on v2 (the v3 cons
-predictions on evergreen v2 exist; full cross-version aggregation
-pending).
-
-What the result confirms:
-
-1. **Method works.** v4 conservative's evergreen-v2 clean recall lands
-   in the lower half of the expected target tier (35-55%). The data
-   composition fix (1,000 random clean + 300 cot_zh short clean +
-   v2active002) was the right intervention. The "rule_clean shortcut"
-   diagnosis was structurally correct even though the no-flag
-   ablation showed it was driven by training distribution rather
-   than prompt form.
-2. **Precision improved more than recall**. v4's not_keep precision
-   on clean is 0.81 vs v3's ~0.60. This means the scorer's reject
-   verdicts are now usable for production routing without aggressive
-   downstream review. v3's rejects were too noisy to act on without
-   human verification; v4's are not.
-3. **Flagged-stratum recall regression is expected, not a problem**.
-   v3's flagged 50% recall came from over-relying on rule_flag as a
-   discriminator. v4 has been forced (by the random clean negatives)
-   to learn content-based judgment that applies uniformly across
-   clean and flagged. Under Confident GT (which excludes ambiguous
-   score-3 records), v4's flagged recall is 45% — within range of
-   v3. Production-weighted impact of the change:
-   - Production distribution is ~95% rule_clean, ~5% rule_flagged
-   - v3 weighted recall: 0.95 × 10.08% + 0.05 × 50.00% = **12.1%**
-   - v4 weighted recall: 0.95 × 36.18% + 0.05 × 32.14% = **36.0%**
-   - v4 catches **3x more** real bad data per production scan
-4. **No-flag prompt produces nearly identical v4 numbers** (within
-   1pp on every metric). Reconfirms the 2026-05-07 ablation finding
-   from a different angle: the model has internalized the rule_flag
-   information and does not need it explicit in the prompt at
-   inference time.
-
-What it does not yet show:
-
-- Cross-version comparison on the same evergreen v2 records — v3 cons
-  on v2 needs aggregating to confirm exact deltas
-- v4 confident behavior — training pending
-- openmath_reasoning clean is still unevaluable (only 9 true
-  negatives in the 75-record stratum)
-- Behavior under domain shift (a 4th source not in training)
-
-Decision per the v4 Strategy Decision tier table: result is in
-**"Expected target" tier** -> method validated -> proceed to v5
-synthetic distillation as a polish iteration, OR proceed to Phase E
-(downstream SFT validation) as the final value-of-method test.
-Either is defensible; v5 is the safer demonstration of methodology
-maturity, Phase E is the more complete story.
-
-## v5 Strategy: Synthetic Hard-Negative Distillation
-
-Planned, not started. Activate after v4 evergreen evaluation lands. The
-purpose is to supply a controlled, scalable source of "clean but
-actually drop" training examples that complements (not replaces) the
-real teacher-labeled batches.
-
-### Motivation
-
-Even with v4_random_supplement (~240 fresh hard clean negatives), the
-class is still small relative to "clean keep" (~thousands). Real-world
-hard negatives are also expensive to find: at 24% drop rate inside
-clean, every additional 100 hard negatives costs 400+ teacher labels.
-Synthetic generation breaks that ratio.
-
-### Pipeline (planned)
-
-1. **Source**: 500 evergreen-grade keep records (DeepSeek score 5,
-   sampled across cot_zh / finetome / openmath, source-stratified).
-2. **Corruption generation**: prompt a *different* strong LLM (Claude
-   Haiku or GPT-4o-mini, never DeepSeek) to corrupt each record into 1-2
-   subtly broken variants. Corruption modes:
-   - subtle factual error in the reasoning chain
-   - reasoning that drifts off the actual question
-   - partially correct answer with missing completeness
-   - plausible but wrong final number / conclusion
-   The corrupted output must pass rule_flag (length OK, not garbled,
-   not dup), so the only signal is content quality.
-3. **Re-labeling**: pass all corrupted variants through DeepSeek
-   teacher (the same labeling pipeline used everywhere else). Drop any
-   variant DeepSeek still labels keep — those are "distillation
-   failures" where the corruption did not actually break quality. Keep
-   only variants with teacher score 1-3.
-4. **Mix into training**: synthetic hard negatives must stay below ~30%
-   of total training records so the model does not overfit to the
-   stylistic signature of the corruption LLM. Real teacher batches
-   dominate; synthetic is a tail-extender.
-5. **Evergreen stays clean**: synthetic data NEVER enters evergreen,
-   locked test, or any evaluation set. The test distribution must
-   remain the natural production distribution.
-
-### Why two different LLMs
-
-Using the same model to both generate "bad" data and to label all data
-creates a self-consistency loop: the labeler will reliably mark its own
-generator's outputs as bad, but that agreement carries no information
-about real-world bad data. The corruption LLM and the teacher LLM must
-be different families.
-
-### Risks and how to bound them
-
-- **Synthetic-signature overfitting**: model learns "this prose style =
-  bad" rather than "this content quality = bad." Mitigated by the 30%
-  cap and by mixing across multiple corruption modes.
-- **Teacher's own blind spots**: if DeepSeek systematically misses a
-  real failure mode, synthetic generation cannot manufacture training
-  signal for it. Synthetic is bounded above by teacher quality. (Same
-  bound as the rest of the project; not a new risk.)
-- **Evaluation contamination**: enforced by the policy that synthetic
-  records carry an explicit `synthetic: true` flag and cannot land in
-  any locked / evergreen / human-verify file.
-
-### Expected lift
-
-Speculative until the v4 baseline is in. Educated guess: an additional
-+5 to +15pp on evergreen clean cot_zh not_keep recall on top of the v4
-baseline, mostly by reinforcing failure modes the model has now seen
-once or twice but not robustly.
-
-### Scripts not yet written
-
-- `scripts/24_distill_synthetic_hard_negatives.py`
-- `scripts/25_filter_distillation_failures.py`
-- corresponding LLaMA-Factory dataset entries: `scorer_binary_v5_*`
-
-## Project Context
-
-This is a portfolio / interview-prep project, not an industrial one. The
-DeepSeek API budget is effectively zero, GPU is a personal workstation,
-and there is no production deployment target. This shapes several
-decisions that look different from how the same problem would be set up
-at a company:
-
-- **Teacher agreement is the legitimate success metric.** The core
-  scientific claim is "a small Qwen3-8B LoRA can compress a stronger
-  teacher's data-quality judgment." If the small model imitates DeepSeek
-  well, the same architecture and pipeline applied with Claude or GPT-4
-  as teacher would inherit that teacher's higher recall ceiling. So
-  "evergreen recall under DeepSeek labels" is *the right thing to
-  optimize*, not a noisy proxy for some hypothetical human-truth recall.
-  The 50-record human verification (`scripts/23_sample_evergreen_human_verify.py`)
-  is positioned as a sanity check that DeepSeek is a competent teacher
-  in the first place, not as a discount factor on every reported number.
-- **Synthetic data augmentation is on the table.** Distillation-style
-  generation of hard negatives from a strong LLM (Claude / GPT-4) is
-  cheap here and addresses class imbalance directly. See "v5 Strategy"
-  below.
-- **Multi-teacher consensus, calibrated probability outputs, and
-  out-of-domain evergreen slices** are deferred. They would matter for
-  productionizing the scorer; for portfolio-grade method validation they
-  are not blocking.
-
-This context also frames how to read "is the scorer good enough."
-Industrial framing would say "35% recall lets 65% of bad data through,
-unusable." Portfolio framing says "35% recall on the residual after
-rule_flag filtering means combined keep+rule recall is materially better
-than rule alone, and the method scales with teacher quality."
-
-## Goal
-
-Build a small local data-quality scorer for supervised fine-tuning samples. The
-scorer should imitate a stronger teacher model well enough to filter or
-prioritize future SFT data at lower cost.
-
-## Current Pipeline
-
-1. Normalize source datasets into a shared schema.
-2. Apply light rule-based quality checks.
-3. Sample a 1,000-example starter set with source-aware allocation.
-4. Label the starter set with a teacher model.
-5. Convert teacher labels into LLaMA-Factory SFT format.
-6. Train a Qwen3-4B LoRA scorer.
-7. Evaluate on held-out valid/test splits.
-8. Simplify the target into a binary confident scorer because the original
-   1-5 score task had ambiguous middle labels.
-9. Add targeted teacher labels for known weak/boundary areas.
-10. Build v2 binary datasets with both confident and conservative score-3
-    policies.
-11. Train and evaluate Qwen3-8B v2 conservative as the current quality-first
-    candidate.
-12. Train and evaluate Qwen3-8B v2 confident as the high-confidence keep
-    ablation.
-13. Run both Qwen3-8B v2 scorers on the 3,600-row teacher-candidate pilot pool.
-14. Build and label the deduplicated active-learning batch `v2active001`.
-15. Build v3 binary datasets from starter + targeted + `v2active001`.
-16. Train and evaluate Qwen3-8B v3 conservative/confident variants.
-17. Run both v3 scorers on a 5,000-record unlabeled pool, build the
-    agreement / priority queue, and produce the `v2active002` teacher batch.
-18. (in progress) DeepSeek-label `v2active002` (2,365 records).
-19. Next: build v4 binary datasets from starter + targeted + v2active001 +
-    v2active002 and train Qwen3-8B v4 conservative/confident.
-
-## Data Sources
-
-- `cot_zh`: Chinese chain-of-thought style reasoning data.
-- `finetome`: broad instruction-following data.
-- `openmath_reasoning`: math reasoning data.
-
-The starter split is intentionally not equal-weighted. It keeps the source mix
-closer to the project goal and gives enough examples to compare behavior by
-source.
-
-## Completed Artifacts
-
-Teacher-label artifacts:
-
-- `reports/teacher_sampling_starter_1000_report.md`
-- `reports/teacher_label_report_1000.md`
-- `data/labeled/teacher_judge/pilot_teacher_labels.jsonl`
-- `data/labeled/teacher_judge/starter_1000_teacher_labels.jsonl`
-
-Original 1-5 scorer artifacts:
-
-- `data/labeled/scorer_sft/scorer_sft_report.md`
-- `reports/scorer_eval_valid_greedy_report.md`
-- `reports/scorer_eval_test_greedy_report.md`
-- `reports/scorer_error_analysis_greedy_report.md`
-
-Binary confident scorer artifacts:
-
-- `data/labeled/scorer_binary_sft/scorer_binary_confident_1000_report.md`
-- `reports/scorer_binary_eval_valid_report.md`
-- `reports/scorer_binary_eval_test_report.md`
-- `reports/scorer_binary_experiment_report.md`
-
-Qwen3-8B v1 capacity-check artifacts:
-
-- `configs/llamafactory/scorer_binary_confident_1000_qwen3_8b_lora_e3.yaml`
-- `configs/llamafactory/scorer_binary_confident_1000_qwen3_8b_lora_predict_valid.yaml`
-- `configs/llamafactory/scorer_binary_confident_1000_qwen3_8b_lora_predict_test.yaml`
-- `reports/scorer_binary_qwen3_8b_v1_experiment_report.md`
-- `reports/scorer_binary_eval_valid_qwen3_8b_v1_report.md`
-- `reports/scorer_binary_eval_test_qwen3_8b_v1_report.md`
-
-Next teacher-labeling batch artifacts:
-
-- `scripts/11_build_targeted_teacher_batch.py`
-- `reports/teacher_sampling_targeted_1200_report.md`
-- `reports/teacher_label_report_targeted_1200.md`
-- `data/splits/teacher_judge/targeted_1200/targeted_teacher_candidates_all.jsonl`
-- `data/labeled/teacher_judge/targeted_1200_teacher_prompts.jsonl`
-- `data/labeled/teacher_judge/targeted_1200_teacher_labels.jsonl`
-
-V2 binary scorer dataset artifacts:
-
-- `data/labeled/scorer_binary_sft_v2/scorer_binary_v2_confident_report.md`
-- `data/labeled/scorer_binary_sft_v2/scorer_binary_v2_conservative_report.md`
-- `data/labeled/scorer_binary_sft_v2/dataset_info.json`
-
-V3 binary scorer dataset artifacts:
-
-- `data/labeled/scorer_binary_sft_v3/scorer_binary_v3_confident_report.md`
-- `data/labeled/scorer_binary_sft_v3/scorer_binary_v3_conservative_report.md`
-- `data/labeled/scorer_binary_sft_v3/dataset_info.json`
-
-Qwen3-8B v3 training/evaluation configs:
-
-- `configs/llamafactory/scorer_binary_v3_conservative_qwen3_8b_lora_e3.yaml`
-- `configs/llamafactory/scorer_binary_v3_conservative_qwen3_8b_lora_predict_valid.yaml`
-- `configs/llamafactory/scorer_binary_v3_conservative_qwen3_8b_lora_predict_test.yaml`
-- `configs/llamafactory/scorer_binary_v3_confident_qwen3_8b_lora_e3.yaml`
-- `configs/llamafactory/scorer_binary_v3_confident_qwen3_8b_lora_predict_valid.yaml`
-- `configs/llamafactory/scorer_binary_v3_confident_qwen3_8b_lora_predict_test.yaml`
-
-Qwen3-8B v2 conservative artifacts:
-
-- `configs/llamafactory/scorer_binary_v2_conservative_qwen3_8b_lora_e3.yaml`
-- `configs/llamafactory/scorer_binary_v2_conservative_qwen3_8b_lora_predict_valid.yaml`
-- `configs/llamafactory/scorer_binary_v2_conservative_qwen3_8b_lora_predict_test.yaml`
-- `reports/scorer_binary_v2_conservative_qwen3_8b_experiment_report.md`
-- `reports/scorer_binary_v2_conservative_eval_valid_report.md`
-- `reports/scorer_binary_v2_conservative_eval_test_report.md`
-- `data/eval/scorer_binary_v2_conservative_eval_valid_metrics.json`
-- `data/eval/scorer_binary_v2_conservative_eval_test_metrics.json`
-
-Qwen3-8B v2 confident artifacts:
-
-- `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_e3.yaml`
-- `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_predict_valid.yaml`
-- `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_predict_test.yaml`
-- `reports/scorer_binary_v2_confident_qwen3_8b_experiment_report.md`
-- `reports/scorer_binary_v2_confident_eval_valid_report.md`
-- `reports/scorer_binary_v2_confident_eval_test_report.md`
-- `data/eval/scorer_binary_v2_confident_eval_valid_metrics.json`
-- `data/eval/scorer_binary_v2_confident_eval_test_metrics.json`
-
-Teacher-candidate v2 inference artifacts:
-
-- `reports/teacher_candidates_all_v2_conservative_inference_report.md`
-- `reports/teacher_candidates_all_v2_confident_inference_report.md`
-- `reports/teacher_candidates_all_v2_model_agreement_report.md`
-- `data/scored/teacher_candidates_all_v2_conservative_predictions.jsonl`
-- `data/scored/teacher_candidates_all_v2_confident_predictions.jsonl`
-- `data/scored/teacher_candidates_all_v2_model_agreement_metrics.json`
-- `data/scored/teacher_candidates_all_v2_model_disagreements.jsonl`
-- `data/scored/teacher_candidates_all_v2_teacher_review_priority.jsonl`
-- `data/scored/teacher_candidates_all_v2_teacher_review_top919.jsonl`
-- `data/labeled/teacher_judge/v2_pilot_top919/v2_pilot_top919_teacher_prompts.jsonl`
-
-Learning and handoff notes:
-
-- `reports/training_lessons_and_notes.md`
-- All `reports/*.md` files now use a common report header:
-  `Report Metadata` followed by `Experiment Context`.
-
-Evergreen no-flag ablation artifacts (2026-05-07):
-
-- `scripts/22_build_evergreen_noflag_lf_dataset.py`
-- `data/labeled/evergreen_lf_noflag/{evergreen_test.jsonl, dataset_info.json}`
-- `configs/llamafactory/evergreen_noflag_predict_v3_conservative.yaml`
-- `configs/llamafactory/evergreen_noflag_predict_v3_confident.yaml`
-- `configs/llamafactory/evergreen_noflag_predict_v2_conservative.yaml`
-- `configs/llamafactory/evergreen_noflag_predict_v2_confident.yaml`
-- `configs/llamafactory/evergreen_noflag_predict_v1_8B_confident.yaml`
-- `configs/llamafactory/evergreen_noflag_predict_v1_4B_confident.yaml`
-- `scripts/run_all_evergreen_noflag_inferences.ps1`
-- `reports/evergreen_noflag_cross_version_eval_report.md`
-- `data/eval/evergreen_noflag_cross_version_eval_metrics.json`
-- `scripts/17_evaluate_on_evergreen.py` updated with `--lf-source-dir`;
-  also derives strata directly from the candidates file.
-- `scripts/09_build_binary_scorer_sft.py` updated with `--no-rule-fields`.
-
-v4 input batch artifacts (in-flight, 2026-05-07):
-
-- `scripts/19_sample_v4_random_supplement.py`
-- `scripts/20_sample_cot_zh_short_clean.py`
-- `data/splits/teacher_judge/v4_random_supplement/teacher_candidates_all.jsonl` (1,000)
-- `data/splits/teacher_judge/v4_cot_zh_short_clean/teacher_candidates_all.jsonl` (300)
-- `data/labeled/teacher_judge/v4_random_supplement/v4_random_supplement_teacher_labels.jsonl` (in progress)
-- `data/labeled/teacher_judge/v4_cot_zh_short_clean/v4_cot_zh_short_clean_teacher_labels.jsonl` (in progress)
-- `reports/v4_random_supplement_sampling_report.md`
-- `reports/v4_cot_zh_short_clean_sampling_report.md`
-
-Evergreen revision artifacts (in-flight, 2026-05-07):
-
-- `scripts/21_sample_evergreen_clean_expansion.py`
-- `data/splits/teacher_judge/evergreen_clean_expansion/teacher_candidates_all.jsonl` (300)
-- `reports/evergreen_clean_expansion_sampling_report.md`
-- `scripts/23_sample_evergreen_human_verify.py`
-- `data/eval/evergreen_human_verify/{sample.jsonl, annotation.md}` (50)
-
-Queued v3 conservative no-flag retrain configs (deferred 2026-05-07):
-
-- `configs/llamafactory/scorer_binary_v3_conservative_noflag_qwen3_8b_lora_e3.yaml`
-- `configs/llamafactory/scorer_binary_v3_conservative_noflag_qwen3_8b_lora_predict_valid.yaml`
-- `configs/llamafactory/scorer_binary_v3_conservative_noflag_qwen3_8b_lora_predict_test.yaml`
-- `configs/llamafactory/evergreen_noflag_predict_v3_conservative_noflag.yaml`
-
-Evergreen v2 build artifacts (2026-05-08):
-
-- `scripts/24_merge_evergreen_v2.py`
-- `scripts/25_generate_evergreen_v2_predict_configs.py`
-- `scripts/run_all_evergreen_v2_inferences.ps1`
-- `data/splits/teacher_judge/evergreen_v2_merged_candidates.jsonl` (900)
-- `data/labeled/teacher_judge/evergreen_v2_merged_teacher_labels.jsonl` (900)
-- `data/eval/evergreen_v2_test_ids.json`
-- `data/labeled/evergreen_lf_v2/{evergreen_test.jsonl, dataset_info.json}`
-- `data/labeled/evergreen_lf_v2_noflag/{evergreen_test.jsonl, dataset_info.json}`
-- `configs/llamafactory/evergreen_v2_predict_{v3_cons,v3_conf,v2_cons,v2_conf,v1_8B,v1_4B}.yaml` (6)
-- `configs/llamafactory/evergreen_v2_noflag_predict_{v3_cons,v3_conf,v2_cons,v2_conf,v1_8B,v1_4B}.yaml` (6)
-- `scripts/17_evaluate_on_evergreen.py` further updated with `--candidates` and `--labels` overrides
-
-Per-source not_keep support comparison (clean stratum):
-
-| Source | Evergreen v1 | Evergreen v2 | Δ |
-| --- | ---: | ---: | ---: |
-| cot_zh | 86 | 184 | +98 |
-| finetome | 24 | 53 | +29 |
-| openmath_reasoning | 9 | 9 | 0 |
-
-v4 input batch artifacts (labeled and split, 2026-05-08):
-
-- `data/labeled/teacher_judge/v2active002/v2active002_teacher_labels{,_train,_valid,_test}.jsonl`
-  (raw 2,368 -> dedup 2,365 -> valid 2,361)
-- `data/labeled/teacher_judge/v4_random_supplement/v4_random_supplement_teacher_labels{,_train,_valid,_test}.jsonl`
-  (raw 1,000 -> valid 999)
-- `data/labeled/teacher_judge/v4_cot_zh_short_clean/v4_cot_zh_short_clean_teacher_labels{,_train,_valid,_test}.jsonl`
-  (raw 303 -> dedup 300 -> valid 300)
-- `scripts/26_prepare_v4_label_splits.py` (dedup-and-split helper)
-
-v4 binary scorer datasets (2026-05-08):
-
-- `data/labeled/scorer_binary_sft_v4/scorer_binary_v4_conservative_{train,valid,test,all,skipped}.jsonl`
-- `data/labeled/scorer_binary_sft_v4/scorer_binary_v4_conservative_report.md`
-- `data/labeled/scorer_binary_sft_v4/scorer_binary_v4_confident_{train,valid,test,all,skipped}.jsonl`
-- `data/labeled/scorer_binary_sft_v4/scorer_binary_v4_confident_report.md`
-- `data/labeled/scorer_binary_sft_v4/dataset_info.json`
-
-v4 LLaMA-Factory configs (2026-05-08):
-
-- `configs/llamafactory/scorer_binary_v4_conservative_qwen3_8b_lora_e3.yaml`
-- `configs/llamafactory/scorer_binary_v4_conservative_qwen3_8b_lora_predict_valid.yaml`
-- `configs/llamafactory/scorer_binary_v4_conservative_qwen3_8b_lora_predict_test.yaml`
-- `configs/llamafactory/scorer_binary_v4_confident_qwen3_8b_lora_e3.yaml`
-- `configs/llamafactory/scorer_binary_v4_confident_qwen3_8b_lora_predict_valid.yaml`
-- `configs/llamafactory/scorer_binary_v4_confident_qwen3_8b_lora_predict_test.yaml`
-- `configs/llamafactory/evergreen_v2_predict_v4_conservative.yaml`
-- `configs/llamafactory/evergreen_v2_predict_v4_confident.yaml`
-- `configs/llamafactory/evergreen_v2_noflag_predict_v4_conservative.yaml`
-- `configs/llamafactory/evergreen_v2_noflag_predict_v4_confident.yaml`
-
-v4 trained adapter (2026-05-08):
-
-- `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v4_conservative_qwen3_8b_lora_e3` (LoRA, ~22M params, best checkpoint auto-selected)
-
-## Current Best Result
-
-The Qwen3-8B v3 conservative scorer is the current main quality-first candidate.
-The Qwen3-8B v3 confident scorer is the companion high-confidence keep filter.
-The Qwen3-4B v1 binary confident scorer remains the compact baseline.
-
-Qwen3-8B v3 conservative (current main candidate, `scorer_binary_v3_conservative`):
-
-| Split | Accuracy | Keep F1 | Not-keep F1 | Not-keep recall | JSON valid |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Valid | 74.16% | 0.756 | 0.725 | 72.80% | 100% |
-| Test | 76.89% | 0.796 | 0.734 | 77.06% | 100% |
-
-Interpretation:
-
-- Best reject-boundary metrics to date: test not_keep F1 0.734 and not_keep
-  recall 77.06%.
-- Prediction distribution is balanced: 144 keep / 120 not_keep on test split.
-- Per-source test accuracy: cot_zh 71.32%, finetome 77.67%, openmath 96.88%.
-  cot_zh remains the weakest source.
-- Use for review routing, hard-negative mining, and teacher-relabeling
-  prioritization. Do not use for blind automatic deletion.
-
-Qwen3-8B v3 confident (companion high-confidence keep filter, `scorer_binary_v3_confident`):
-
-| Split | Accuracy | Keep F1 | Not-keep F1 | Not-keep recall | JSON valid |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Valid | 72.65% | 0.794 | 0.595 | 51.09% | 100% |
-| Test | 78.90% | 0.851 | 0.638 | 53.66% | 100% |
-
-Interpretation:
-
-- Keep recall 92.26% on test; useful for prioritizing likely keep examples.
-- Not-keep recall only 53.66%; do not use as a reject model.
-- Disagreements between v3 conservative and v3 confident are the highest-value
-  teacher-relabeling candidates.
-
-Historical results for reference:
-
-Qwen3-4B v1 binary confident (compact baseline):
-
-| Split | Accuracy | Keep F1 | Not-keep F1 | JSON valid |
-| --- | ---: | ---: | ---: | ---: |
-| Valid | 82.11% | 0.872 | 0.702 | 100% |
-| Test | 76.04% | 0.824 | 0.623 | 100% |
-
-Qwen3-8B v1 binary confident capacity check (same 1,000-example dataset):
-
-| Split | Accuracy | Keep F1 | Not-keep F1 | JSON valid |
-| --- | ---: | ---: | ---: | ---: |
-| Valid | 77.89% | 0.851 | 0.571 | 100% |
-| Test | 84.38% | 0.899 | 0.651 | 100% |
-
-- Test not_keep recall was only 51.85%; too keep-biased for reject routing.
-
-Qwen3-8B v2 conservative:
-
-| Split | Accuracy | Keep F1 | Not-keep F1 | JSON valid |
-| --- | ---: | ---: | ---: | ---: |
-| Valid | 74.55% | 0.799 | 0.655 | 100% |
-| Test | 79.91% | 0.844 | 0.717 | 100% |
-
-- Test not_keep recall 64.04%. Superseded by v3 conservative.
-
-Qwen3-8B v2 confident:
-
-| Split | Accuracy | Keep F1 | Not-keep F1 | JSON valid |
-| --- | ---: | ---: | ---: | ---: |
-| Valid | 76.14% | 0.832 | 0.591 | 100% |
-| Test | 82.41% | 0.879 | 0.679 | 100% |
-
-- Test not_keep recall 57.81%. Superseded by v3 confident.
-
-Training notes:
-
-- `reports/training_lessons_and_notes.md` summarizes the practical training
-  settings, observed model behavior, Windows/LLaMA-Factory pitfalls, metric
-  interpretation, and recommended next learning experiments.
-
-V2 binary scorer datasets are now ready:
-
-| Dataset | Records | Train | Valid | Test | Keep | Not-keep | Score 3 Policy |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| `scorer_binary_v2_confident` | 1,968 | 1,572 | 197 | 199 | 1,283 | 685 | skipped |
-| `scorer_binary_v2_conservative` | 2,200 | 1,752 | 224 | 224 | 1,283 | 917 | mapped to `not_keep` |
-
-`scorer_binary_v2_conservative` was used as the first v2 training target
-because the project policy is quality-first and score 3 should not be
-auto-kept.
-
-V3 binary scorer datasets (trained and evaluated on 2026-05-05):
-
-| Dataset | Records | Train | Valid | Test | Keep | Not-keep | Score 3 Policy |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| `scorer_binary_v3_confident` | 2,326 | 1,855 | 234 | 237 | 1,438 | 888 | skipped |
-| `scorer_binary_v3_conservative` | 2,588 | 2,057 | 267 | 264 | 1,438 | 1,150 | mapped to `not_keep` |
-
-Compared with v2, v3 adds the 388 teacher-confirmed active-learning examples
-from `v2active001`. V3 conservative has now been trained and is the current
-main quality-first scorer; v3 confident is the companion high-confidence keep
-ablation.
-
-Local model artifacts are not committed to GitHub. The important local adapter
-paths are:
-
-- Original 1-5 scorer:
-  `C:\Users\haoran27\llamafactory_outputs\scorer_sft_1000_qwen3_4b_lora_e3`
-- Binary confident scorer:
-  `C:\Users\haoran27\llamafactory_outputs\scorer_binary_confident_1000_qwen3_4b_lora_e3`
-- Qwen3-8B binary confident v1 capacity check:
-  `C:\Users\haoran27\llamafactory_outputs\scorer_binary_confident_1000_qwen3_8b_lora_e3`
-- Qwen3-8B binary conservative v2:
-  `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v2_conservative_qwen3_8b_lora_e3`
-- Qwen3-8B binary confident v2:
-  `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v2_confident_qwen3_8b_lora_e3`
-- Qwen3-8B binary conservative v3:
-  `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v3_conservative_qwen3_8b_lora_e3`
-- Qwen3-8B binary confident v3:
-  `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v3_confident_qwen3_8b_lora_e3`
-
-Use the binary setup for future scorer experiments. The 4B adapter is the
-compact baseline, while the v3 conservative 8B adapter is the current main
-quality-first candidate and the v3 confident 8B adapter is the companion
-high-confidence keep candidate.
-
-3,600-row teacher-candidate pilot result:
-
-| Bucket | Count |
-| --- | ---: |
-| confident keep + conservative keep | 2,681 |
-| confident keep + conservative not_keep | 272 |
-| confident not_keep + conservative keep | 1 |
-| confident not_keep + conservative not_keep | 646 |
-
-Interpretation:
-
-- The two Qwen3-8B v2 scorers agree on 92.42% of the teacher-candidate pilot.
-- The 273 disagreements are compact boundary cases for teacher relabeling.
-- The 646 both-not-keep examples are the strongest hard-negative candidates.
-- The priority review queue has 1,215 records after adding clean-not_keep and
-  flagged-but-kept cases.
-- The original top919 file
-  `data/scored/teacher_candidates_all_v2_teacher_review_top919.jsonl` contains
-  all 273 model disagreements plus all 646 both-not-keep records, but it is not
-  fully unlabeled. Some records were already labeled in the starter/targeted
-  teacher batches.
-- The deduplicated first teacher-labeling batch is
-  `data/splits/teacher_judge/v2_active_pilot_001/v2active001_teacher_candidates_all.jsonl`
-  with 388 priority records that were unlabeled at selection time, and prompts
-  are in
-  `data/labeled/teacher_judge/v2active001/v2active001_teacher_prompts.jsonl`.
-
-## Why the Binary Task Exists
-
-The original 1-5 score task worked technically, but the middle class was noisy:
-
-- `maybe` had near-zero recall.
-- Many mistakes were off-by-one score disagreements.
-- The teacher rubric itself has fuzzy boundaries around score 3.
-
-The binary confident dataset removes score-3 examples and asks a cleaner
-question: "Is this clearly useful training data or clearly not?"
-
-## Next Steps
-
-Recommended next work:
-
-1. Treat v3 training/evaluation as complete and use
-   `reports/scorer_binary_v3_qwen3_8b_experiment_report.md` as the current
-   scorer report.
-2. Use v3 conservative as the main quality-first scorer for review routing and
-   hard-negative mining.
-3. Use v3 confident as the high-confidence keep companion.
-4. Run both v3 scorers on a larger unlabeled pool, excluding all already
-   teacher-labeled original sample `id`s.
-5. Keep a small calibration sample from three buckets:
-   - high-confidence keep
-   - high-confidence not_keep
-   - conservative/confident disagreement examples
-6. Use the teacher model only on uncertain or high-impact examples.
-7. Add more negative examples, especially from `cot_zh` and `finetome`.
-8. Keep Qwen3-4B as the compact comparison baseline, but do not prioritize
-   v2 4B training until the 8B models have been used to mine hard cases.
-9. Only after the binary scorer is stable, consider adding a second-stage
-   severity score or a calibrated confidence score.
-
-Concrete next implementation plan:
-
-1. Run v3 conservative and v3 confident inference on the next candidate pool
-   with `scripts/12_infer_binary_scorer.py`.
-2. Build a v3 agreement/disagreement report similar to the v2 3,600-row pilot
-   report.
-3. Use `scripts/13_build_teacher_review_batch.py` again with a new batch prefix
-   such as `v2active002`, excluding all prior teacher-label files by original
-   sample `id`.
-4. Prioritize teacher review from:
-   - v3 conservative/confident disagreements
-   - v3 conservative predicted `not_keep`
-   - rule-flagged examples predicted `keep`
-   - `cot_zh` examples near the current weak boundary
-5. After the next teacher batch is labeled, rebuild the binary scorer dataset
-   as the next data version and compare against v3 conservative/confident.
-
-Avoid spending much more effort on the 1-5 score setup until the binary filter
-is more stable. The 1-5 scorer is useful as an error-analysis reference, but it
-is not the best current training target.
-
-## Downstream SFT Validation Plan (Phase E)
-
-This is the project's final validation: prove that the scorer actually improves
-a downstream supervised fine-tuning run, not just that it imitates teacher
-labels. As of 2026-05-05 this is design only; do not start until the gates
-below are satisfied.
-
-### Goal
-
-Show that filtering an SFT dataset with the v4 (or later) binary scorer
-produces a measurably better fine-tuned model than the same SFT pipeline run
-on (a) random data and (b) rule-clean data, on a fixed evaluation suite.
-
-### Pre-flight gates
-
-Do not start Phase E until:
-
-- The binary scorer has not_keep recall >= 85% on the locked test set
-  (`data/eval/locked_test_ids.json`). v3 conservative is at 77.06%; one or two
-  more active-learning rounds (`v2active002`, `v2active003`) should be the
-  natural lift.
-- Inference cost for filtering the SFT pool is understood. Running v4
-  conservative + confident over 188,103 records at `batch_size=1` is on the
-  order of 16-30 hours; budget GPU time or batch the pool down.
-- Disk has room for 4-5 LoRA adapters and their training/eval logs (~5-10 GB
-  per LoRA on a 7B target model).
-
-### Open decisions
-
-Each item below is a launch-blocking choice. The recommendation is the
-current default unless the user changes it.
-
-1. **Target base model.** Recommendation: `Qwen2.5-7B` base. Reasons: similar
-   capacity to the scorer, different generation than Qwen3 (so the base does
-   not have memorized scorer training data), well-studied. Alternatives:
-   `Qwen2.5-3B` for faster iteration, `Llama-3-8B` for cross-family check.
-2. **SFT data pool.** Recommendation: keep using `unified_sft_clean.jsonl`
-   (188K). Same three sources the scorer was trained on, so the scorer is in
-   distribution. Do not pull in unrelated sources for the first comparison.
-3. **Evaluation suite.** Recommendation:
-   - GSM8K (math reasoning, covers `cot_zh` and `openmath_reasoning`)
-   - IFEval (instruction following, covers `finetome`)
-   - MMLU (general knowledge baseline)
-   Skip code benchmarks (e.g. HumanEval) since the SFT pool is not code. Skip
-   preference evals (MT-Bench, AlpacaEval) for the first run because they
-   require an LLM judge and add noise.
-4. **Sample size N.** Recommendation: 20K per group. 5K is too small for MMLU
-   sensitivity, 50K doubles training time without clear benefit for a first
-   pass. Use the same N across groups so data quality is the only variable.
-5. **Comparison groups.**
-   - **G0 base.** Untrained `Qwen2.5-7B` base, zero-shot.
-   - **G1 random.** N drawn uniformly from the 188K pool.
-   - **G2 rule-clean.** N drawn uniformly from `is_clean == true` records.
-   - **G3 scorer-keep.** N drawn from records the v4 conservative scorer
-     predicts `keep`.
-   - **G4 scorer-strict.** N drawn from records where both v4 conservative
-     and v4 confident predict `keep` (intersection).
-   - **G5 anti-baseline (optional).** N drawn from records the scorer
-     predicts `not_keep`. If G5 underperforms G1, the scorer is doing
-     something useful even when G3/G4 do not beat G1 by much.
-   For all groups, match source distribution to G1 so the only difference
-   across runs is the keep/not_keep filter, not the source mix.
-6. **SFT training setup.** Recommendation: LoRA, rank 16, lr 1e-4, 3 epochs,
-   identical config across groups. Fixed seed. Save the final checkpoint of
-   each run; do not best-checkpoint-select per group, otherwise different
-   groups get different effective training durations.
-7. **What counts as "improvement."** Report the delta on each benchmark
-   relative to G0 (base) and compare deltas across G1-G4. A scorer is
-   interesting if G3 or G4 beats G1 by more than the run-to-run noise floor.
-   Rerun G1 with two seeds to estimate that noise floor.
-
-### Pipeline steps once decisions are locked
-
-1. Run v4 scorer (conservative + confident) on the full SFT pool. Save
-   keep/not_keep predictions per id.
-2. Sample G1-G4 (and optionally G5) so that source distribution matches G1
-   and N is identical.
-3. Convert each group to LLaMA-Factory SFT format and write
-   `dataset_info.json` entries.
-4. Train each group with the same LLaMA-Factory config, changing only
-   `dataset` and `output_dir`.
-5. Run the evaluation suite on G0 (base) and on each trained adapter.
-6. Aggregate results into a single comparison report and decide whether the
-   scorer is production ready or needs another scorer iteration.
-
-### New artifacts the project will need
-
-- `scripts/15_score_full_sft_pool.py`: large-scale scorer inference on
-  `unified_sft_clean.jsonl` with both v4 adapters; outputs joined per-id
-  predictions and source breakdowns.
-- `scripts/16_build_sft_comparison_groups.py`: samples G1-G4 from the scored
-  pool with matched source distribution and identical N.
-- `scripts/17_export_sft_dataset.py`: converts a sampled group into
-  LLaMA-Factory dataset format and writes a `dataset_info.json` entry.
-- `configs/llamafactory/sft_eval_*_qwen25_7b_lora.yaml`: training configs
-  for each comparison group.
-- `scripts/18_run_eval_suite.py`: wraps GSM8K / IFEval / MMLU evaluation
-  for base model and each LoRA adapter; writes per-run metrics JSON.
-- `scripts/19_compare_sft_results.py`: aggregates eval outputs into a
-  single markdown comparison table.
-
-### Risks to watch
-
-- **Source bias.** The scorer treats `cot_zh`, `finetome`, and
-  `openmath_reasoning` differently. If G3/G4 has a skewed source mix relative
-  to G1, the comparison is unfair. Match source distribution across groups.
-- **Insufficient keep pool.** If v4's overall keep rate on the 188K pool is
-  below ~30%, G3/G4 may exhaust before reaching N=20K. Verify keep rate
-  before committing to N.
-- **Run-to-run noise.** A 0.5% delta on MMLU is within noise for small N.
-  Rerun G1 with at least two seeds to set a noise floor before reading any
-  improvement claim.
-- **Evaluation leakage.** Confirm that the SFT pool does not contain GSM8K
-  or MMLU training items. If it does, the comparison measures contamination,
-  not data quality.
-
-## GitHub Notes
-
-Commit:
-
-- scripts
-- prompts
-- configs
-- markdown reports
-- small metadata files
-
-Use `PROJECT_FILE_INVENTORY.md` as the pre-GitHub checklist.
-
-Do not commit:
-
-- raw datasets
-- generated JSONL data
-- API keys
-- Hugging Face cache files
-- LLaMA-Factory model outputs
-- local checkpoint directories
-
-Current `.gitignore` is set up to ignore generated JSONL files, processed data,
-splits, Python caches, local checkpoints, model weights, and environment files.
-If future work creates new generated directories, update `.gitignore` before
-committing.
+Last updated: 2026-05-08
+
+This file is the working project memory for SFT-DataJudge. The README explains the project to readers; this plan tracks what has been done, what the current decision is, and what should happen next.
+
+## Current Snapshot
+
+We are building a binary scorer for SFT data quality:
+
+```json
+{"verdict": "keep|not_keep"}
+```
+
+Current model decision:
+
+- **Primary candidate:** `v4_conservative`
+- **Secondary companion:** `v4_confident`
+- **Aggressive review reference:** `v3_conservative`
+
+Reason:
+
+`v4_conservative` gives the best current balance for automatic filtering. It has lower clean `not_keep` recall than `v3_conservative`, but much better `not_keep` precision and `keep` recall, which matters when the scorer is allowed to remove data from the downstream SFT pool.
+
+## Selection Criteria
+
+The main target is not simply "highest not_keep recall".
+
+For automatic SFT filtering, the scorer should:
+
+- catch clean-looking bad samples
+- avoid throwing away too many good samples
+- output valid JSON reliably
+- remain stable when rule metadata is removed
+
+Current operating criterion:
+
+1. clean `not_keep` precision >= 75%
+2. clean `keep` recall >= 95%
+3. valid JSON rate = 100%
+4. among models satisfying those constraints, prefer higher clean `not_keep` recall
+
+## Completed Work
+
+### Data Pipeline
+
+Done:
+
+- unified sample normalization
+- rule-based quality flags
+- teacher-labeling workflow
+- binary scorer data builders
+- LLaMA-Factory train/predict configs
+- evaluation scripts for in-domain and evergreen tests
+- cross-version evergreen reporting
+
+### Scorer Versions
+
+| Version | Summary | Status |
+|---|---|---|
+| v1 | first 4B/8B scorer baselines | historical baseline |
+| v2 | stronger conservative/confident scorer data | comparison baseline |
+| v3 | larger scorer run with conservative/confident variants | useful but too aggressive on evergreen_v2 |
+| v4 | active learning plus targeted hard clean samples | current candidate family |
+
+### V4 Data
+
+v4 added three important sources:
+
+| Source | Purpose |
+|---|---|
+| `v2active002` | active-learning continuation from model disagreement / uncertain regions |
+| `v4_random_supplement` | random production-like clean samples |
+| `v4_cot_zh_short_clean` | targeted hard clean `cot_zh` slice |
+
+Approximate v4 binary datasets:
+
+| Dataset | Total | Train | Valid | Test | Keep | Not keep |
+|---|---:|---:|---:|---:|---:|---:|
+| v4 conservative | 6,248 | 4,985 | 637 | 626 | 3,296 | 2,952 |
+| v4 confident | 5,562 | 4,444 | 567 | 551 | 3,296 | 2,266 |
+
+Label mapping:
+
+- conservative: score 1-3 -> `not_keep`, score 4-5 -> `keep`
+- confident: score 1-2 -> `not_keep`, score 4-5 -> `keep`, score 3 skipped
+
+### Training
+
+Done:
+
+- `v4_conservative` trained
+- `v4_confident` trained
+
+Known output locations:
+
+- `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v4_conservative_qwen3_8b_lora_e3`
+- `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v4_confident_qwen3_8b_lora_e3`
+
+`v4_conservative` best checkpoint observed:
+
+- checkpoint: 500
+- eval loss: about 0.0509
+
+## Evergreen V2
+
+`evergreen_v2` is the current cross-version test set.
+
+Composition:
+
+- 900 total records
+- 800 clean-looking records
+- 100 flagged records
+- sources: `cot_zh`, `finetome`, `openmath`
+
+Purpose:
+
+- compare model versions on the same fixed set
+- stress-test clean-looking bad examples
+- test whether prompt metadata such as `rule_flag` creates shortcut behavior
+
+Important limitation:
+
+`openmath` still has too few clean `not_keep` examples, so source-level openmath recall should not drive decisions yet.
+
+## Evergreen V2 Results
+
+All current evergreen_v2 predictions are complete:
+
+- 8 models with normal prompt
+- 8 models with no-flag prompt
+- valid JSON rate is 100%
+
+Reports:
+
+- `reports/evergreen_v2_all_models_eval_report.md`
+- `reports/evergreen_v2_noflag_all_models_eval_report.md`
+
+Metrics:
+
+- `data/eval/evergreen_v2_all_models_eval_metrics.json`
+- `data/eval/evergreen_v2_noflag_all_models_eval_metrics.json`
+
+### Normal Prompt, Conservative Ground Truth
+
+| Model | Clean acc | Clean not_keep recall | Clean not_keep precision | Clean keep recall | Flagged not_keep recall |
+|---|---:|---:|---:|---:|---:|
+| `v1_4B_confident` | 72.38 | 43.09 | 56.68 | 85.38 | 42.86 |
+| `v3_conservative` | 76.25 | 41.87 | 68.67 | 91.52 | 50.00 |
+| `v4_conservative` | 77.75 | 36.18 | 80.91 | 96.21 | 32.14 |
+| `v4_confident` | 76.50 | 28.46 | 85.37 | 97.83 | 32.14 |
+| `v2_conservative` | 75.00 | 28.05 | 75.00 | 95.85 | 21.43 |
+| `v1_8B_confident` | 74.12 | 26.42 | 71.43 | 95.31 | 39.29 |
+| `v3_confident` | 74.62 | 25.20 | 76.54 | 96.57 | 17.86 |
+| `v2_confident` | 74.25 | 23.17 | 77.03 | 96.93 | 17.86 |
+
+### No-Flag Prompt, Conservative Ground Truth
+
+| Model | Clean acc | Clean not_keep recall | Clean not_keep precision | Clean keep recall | Flagged not_keep recall |
+|---|---:|---:|---:|---:|---:|
+| `v1_4B_confident_noflag` | 72.50 | 47.56 | 56.25 | 83.57 | 46.43 |
+| `v3_conservative_noflag` | 76.00 | 44.31 | 66.46 | 90.07 | 50.00 |
+| `v4_conservative_noflag` | 77.75 | 36.18 | 80.91 | 96.21 | 39.29 |
+| `v2_conservative_noflag` | 75.25 | 31.71 | 72.22 | 94.58 | 28.57 |
+| `v1_8B_confident_noflag` | 74.50 | 28.86 | 71.00 | 94.77 | 35.71 |
+| `v4_confident_noflag` | 76.50 | 28.86 | 84.52 | 97.65 | 32.14 |
+| `v3_confident_noflag` | 74.75 | 26.42 | 75.58 | 96.21 | 28.57 |
+| `v2_confident_noflag` | 74.25 | 23.98 | 75.64 | 96.57 | 21.43 |
+
+## Current Interpretation
+
+### V4 Conservative
+
+Use as the current main auto-filter candidate.
+
+Strengths:
+
+- clean `not_keep` precision is high enough for automatic filtering
+- clean `keep` recall is above 95%
+- no-flag result is stable, so the model is not obviously relying on `rule_flag`
+- improves over v2 conservative on clean `not_keep` recall
+
+Weakness:
+
+- still misses many clean-looking bad samples
+- flagged-slice recall is not the best
+
+### V4 Confident
+
+Use as a stricter companion model.
+
+Strengths:
+
+- higher `not_keep` precision
+- very high `keep` recall
+
+Weakness:
+
+- lower clean `not_keep` recall
+
+Possible use:
+
+- high-confidence rejection
+- agreement/intersection logic with v4 conservative
+- manual review prioritization
+
+### V3 Conservative
+
+Keep as an aggressive review reference, not the main auto-filter.
+
+Strength:
+
+- high clean `not_keep` recall
+
+Weakness:
+
+- lower precision and lower keep recall mean it throws away more good data
+
+## Remaining Tests
+
+No more evergreen_v2 prediction tests are required right now. The normal and no-flag runs are complete for all current models.
+
+Still useful for a clean v4 release record:
+
+```powershell
+& $LF train configs/llamafactory/scorer_binary_v4_conservative_qwen3_8b_lora_predict_valid.yaml
+& $LF train configs/llamafactory/scorer_binary_v4_conservative_qwen3_8b_lora_predict_test.yaml
+& $LF train configs/llamafactory/scorer_binary_v4_confident_qwen3_8b_lora_predict_valid.yaml
+& $LF train configs/llamafactory/scorer_binary_v4_confident_qwen3_8b_lora_predict_test.yaml
+```
+
+Also still useful:
+
+- finish human audit in `data/eval/evergreen_human_verify/annotation.md`
+- estimate teacher-label noise floor
+- expand evergreen openmath bad-sample support
+
+## Next Phase
+
+### Phase E: Downstream SFT Validation
+
+The scorer is only useful if it improves downstream SFT quality. Next step is to score a larger SFT pool and train/evaluate downstream SFT models under several filtering policies.
+
+Candidate groups:
+
+| Group | Purpose |
+|---|---|
+| unfiltered | baseline |
+| rule-clean only | rule baseline |
+| v4 conservative keep | main scorer-filtered set |
+| v4 confident keep | stricter scorer-filtered set |
+| v4 conservative keep plus manual/top-confidence review | quality-prioritized variant |
+| intersection or agreement of v4 conservative/confident | safest high-precision variant |
+
+Decision target:
+
+- downstream model improves or at least does not regress
+- data volume remains large enough
+- filtered data has visibly fewer corrupted, wrong, irrelevant, or incomplete samples
+
+### Phase F: Better Calibration
+
+Current scorer output is binary JSON. For ranking and top-K filtering, it would be useful to produce or recover confidence.
+
+Options:
+
+- train JSON output with `decision` and `confidence`
+- extract first-token softmax probabilities for `keep` vs `not_keep`
+- calibrate scores against evergreen and human-audited subsets
+
+## Open Questions
+
+1. How much clean `not_keep` recall is enough before downstream SFT gains appear?
+2. What is the real teacher-label noise floor on evergreen_v2?
+3. Does v4 conservative improve downstream SFT quality more than a rule-clean baseline?
+4. Is v4 confident useful as a high-precision reject model, or does it miss too much?
+5. Should the next evergreen version include an OOD source such as alpaca, wizardlm, or ultrachat?
+
+## Decision Log
+
+- Do not select a model only by lowest eval loss.
+- Do not select a model only by highest `not_keep` recall.
+- Use clean `not_keep` recall as the main sensitivity metric, but constrain it with precision and keep recall.
+- Treat flagged metrics as secondary because flagged samples are already easier to catch with rules.
+- Treat evergreen_v2 as the main cross-version benchmark for now.
+- Treat downstream SFT validation as the final go/no-go test.
+
