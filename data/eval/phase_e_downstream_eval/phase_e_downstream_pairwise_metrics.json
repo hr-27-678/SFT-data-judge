@@ -1,0 +1,244 @@
+{
+  "pairwise": {
+    "n_total_labels": 200,
+    "n_valid_labels": 200,
+    "per_model": {
+      "unfiltered": {
+        "n_judged": 200,
+        "avg_rank": 2.565,
+        "first_place": 53,
+        "last_place": 61,
+        "first_place_rate": 0.265,
+        "correctness_counts": {
+          "wrong": 51,
+          "correct": 120,
+          "partial": 26,
+          "unparseable": 3
+        },
+        "correctness_rate": 0.6,
+        "wrong_rate": 0.255
+      },
+      "v4_conservative_keep": {
+        "n_judged": 200,
+        "avg_rank": 2.51,
+        "first_place": 45,
+        "last_place": 47,
+        "first_place_rate": 0.225,
+        "correctness_counts": {
+          "partial": 27,
+          "unparseable": 7,
+          "correct": 119,
+          "wrong": 47
+        },
+        "correctness_rate": 0.595,
+        "wrong_rate": 0.235
+      },
+      "v4_confident_keep": {
+        "n_judged": 200,
+        "avg_rank": 2.535,
+        "first_place": 48,
+        "last_place": 49,
+        "first_place_rate": 0.24,
+        "correctness_counts": {
+          "partial": 34,
+          "correct": 115,
+          "wrong": 49,
+          "unparseable": 2
+        },
+        "correctness_rate": 0.575,
+        "wrong_rate": 0.245
+      },
+      "v4_both_keep": {
+        "n_judged": 200,
+        "avg_rank": 2.39,
+        "first_place": 54,
+        "last_place": 43,
+        "first_place_rate": 0.27,
+        "correctness_counts": {
+          "correct": 136,
+          "unparseable": 5,
+          "wrong": 32,
+          "partial": 27
+        },
+        "correctness_rate": 0.68,
+        "wrong_rate": 0.16
+      }
+    },
+    "pairwise_matrix": {
+      "unfiltered": {
+        "v4_conservative_keep": {
+          "wins": 97,
+          "losses": 103,
+          "win_rate": 0.485
+        },
+        "v4_confident_keep": {
+          "wins": 94,
+          "losses": 106,
+          "win_rate": 0.47
+        },
+        "v4_both_keep": {
+          "wins": 96,
+          "losses": 104,
+          "win_rate": 0.48
+        }
+      },
+      "v4_conservative_keep": {
+        "unfiltered": {
+          "wins": 103,
+          "losses": 97,
+          "win_rate": 0.515
+        },
+        "v4_confident_keep": {
+          "wins": 106,
+          "losses": 94,
+          "win_rate": 0.53
+        },
+        "v4_both_keep": {
+          "wins": 89,
+          "losses": 111,
+          "win_rate": 0.445
+        }
+      },
+      "v4_confident_keep": {
+        "unfiltered": {
+          "wins": 106,
+          "losses": 94,
+          "win_rate": 0.53
+        },
+        "v4_conservative_keep": {
+          "wins": 94,
+          "losses": 106,
+          "win_rate": 0.47
+        },
+        "v4_both_keep": {
+          "wins": 93,
+          "losses": 107,
+          "win_rate": 0.465
+        }
+      },
+      "v4_both_keep": {
+        "unfiltered": {
+          "wins": 104,
+          "losses": 96,
+          "win_rate": 0.52
+        },
+        "v4_conservative_keep": {
+          "wins": 111,
+          "losses": 89,
+          "win_rate": 0.555
+        },
+        "v4_confident_keep": {
+          "wins": 107,
+          "losses": 93,
+          "win_rate": 0.535
+        }
+      }
+    },
+    "versus_unfiltered": {
+      "v4_conservative_keep": {
+        "wins": 103,
+        "losses": 97,
+        "win_rate_vs_unfiltered": 0.515
+      },
+      "v4_confident_keep": {
+        "wins": 106,
+        "losses": 94,
+        "win_rate_vs_unfiltered": 0.53
+      },
+      "v4_both_keep": {
+        "wins": 104,
+        "losses": 96,
+        "win_rate_vs_unfiltered": 0.52
+      }
+    },
+    "by_source": {
+      "finetome": {
+        "v4_both_keep": {
+          "n": 80,
+          "avg_rank": 2.212
+        },
+        "v4_confident_keep": {
+          "n": 80,
+          "avg_rank": 2.562
+        },
+        "v4_conservative_keep": {
+          "n": 80,
+          "avg_rank": 2.575
+        },
+        "unfiltered": {
+          "n": 80,
+          "avg_rank": 2.65
+        }
+      },
+      "cot_zh": {
+        "v4_confident_keep": {
+          "n": 80,
+          "avg_rank": 2.475
+        },
+        "v4_conservative_keep": {
+          "n": 80,
+          "avg_rank": 2.388
+        },
+        "unfiltered": {
+          "n": 80,
+          "avg_rank": 2.538
+        },
+        "v4_both_keep": {
+          "n": 80,
+          "avg_rank": 2.6
+        }
+      },
+      "openmath_reasoning": {
+        "v4_both_keep": {
+          "n": 40,
+          "avg_rank": 2.325
+        },
+        "v4_conservative_keep": {
+          "n": 40,
+          "avg_rank": 2.625
+        },
+        "v4_confident_keep": {
+          "n": 40,
+          "avg_rank": 2.6
+        },
+        "unfiltered": {
+          "n": 40,
+          "avg_rank": 2.45
+        }
+      }
+    }
+  },
+  "math": {
+    "n_math": 40,
+    "per_model": {
+      "unfiltered": {
+        "extracted": 35,
+        "correct": 22,
+        "total": 40,
+        "accuracy": 0.55,
+        "extract_rate": 0.875
+      },
+      "v4_conservative_keep": {
+        "extracted": 32,
+        "correct": 19,
+        "total": 40,
+        "accuracy": 0.475,
+        "extract_rate": 0.8
+      },
+      "v4_confident_keep": {
+        "extracted": 32,
+        "correct": 18,
+        "total": 40,
+        "accuracy": 0.45,
+        "extract_rate": 0.8
+      },
+      "v4_both_keep": {
+        "extracted": 36,
+        "correct": 23,
+        "total": 40,
+        "accuracy": 0.575,
+        "extract_rate": 0.9
+      }
+    }
+  }
+}

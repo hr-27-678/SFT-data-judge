@@ -1,6 +1,6 @@
 # Project Plan
 
-Last updated: 2026-05-08
+Last updated: 2026-05-11
 
 This file is the working project memory for SFT-DataJudge. The README explains the project to readers; this plan tracks what has been done, what the current decision is, and what should happen next.
 
@@ -241,12 +241,102 @@ Also still useful:
 
 The scorer is only useful if it improves downstream SFT quality. Next step is to score a larger SFT pool and train/evaluate downstream SFT models under several filtering policies.
 
+Current Phase E status:
+
+- built exclusion-safe clean candidate pool: `data/splits/phase_e/phase_e_clean_candidate_15k.jsonl`
+- completed v4 scoring on the same 15k pool:
+  - `data/scored/phase_e_v4_conservative_clean_15k.jsonl`
+  - `data/scored/phase_e_v4_confident_clean_15k.jsonl`
+- built downstream SFT datasets in `data/labeled/phase_e_sft/`
+- generated Phase E dataset report: `reports/phase_e_downstream_dataset_report.md`
+- prepared four Qwen3-8B LoRA e1 training configs under `configs/llamafactory/`
+- built small held-out downstream eval set:
+  - samples: `data/eval/phase_e_downstream_eval/sample.jsonl`
+  - LLaMA-Factory dataset: `data/labeled/phase_e_downstream_eval_lf/`
+  - report: `reports/phase_e_downstream_eval_sampling_report.md`
+- completed all four Phase E downstream Qwen3-8B LoRA e1 training runs:
+  - `phase_e_unfiltered_clean_15k`
+  - `phase_e_v4_conservative_keep_clean_15k`
+  - `phase_e_v4_confident_keep_clean_15k`
+  - `phase_e_v4_both_keep_clean_15k`
+- completed all four Phase E eval generations on the fixed 200-prompt set
+- generated Phase E prediction comparison artifacts:
+  - script: `scripts/30_compare_phase_e_downstream_predictions.py`
+  - report: `reports/phase_e_downstream_prediction_comparison_report.md`
+  - metrics: `data/eval/phase_e_downstream_eval/phase_e_downstream_prediction_comparison_metrics.json`
+  - side-by-side predictions: `data/eval/phase_e_downstream_eval/phase_e_downstream_prediction_comparison.jsonl`
+  - review queue: `data/eval/phase_e_downstream_eval/phase_e_downstream_review_queue.jsonl`
+
+Current automatic Phase E readout:
+
+| Model | BLEU-4 | ROUGE-L | Token F1 | Len ratio | Repetition flags | Truncation flags |
+|---|---:|---:|---:|---:|---:|---:|
+| `unfiltered` | 48.06 | 48.61 | 0.629 | 1.20 | 29 | 1 |
+| `v4_conservative_keep` | 47.26 | 48.15 | 0.618 | 1.26 | 29 | 2 |
+| `v4_confident_keep` | 47.56 | 48.57 | 0.625 | 1.06 | 27 | 0 |
+| `v4_both_keep` | 46.65 | 47.77 | 0.619 | 1.07 | 22 | 1 |
+
+Interpretation:
+
+- These are reference-overlap and surface-quality proxy metrics, not final quality judgments.
+- The filtered downstream models do not show an obvious aggregate proxy-metric improvement over the unfiltered baseline on the current 200-prompt eval set.
+- `v4_confident_keep` is closest to unfiltered by aggregate overlap and has fewer truncation issues.
+- `v4_both_keep` is not currently supported as a better downstream policy by these proxy metrics.
+- Next useful step is manual or teacher-judge review of `phase_e_downstream_review_queue.jsonl`, especially math/openmath and repeated/truncated generations.
+
+Completed teacher pairwise judge over the 200-prompt eval set (DeepSeek-v4-pro, all four models judged together per prompt with randomized A/B/C/D order):
+
+- prompt template: `prompts/teacher_judge_pairwise_prompt.md`
+- runner: `scripts/31_teacher_judge_pairwise.py` (concurrent, with resume support)
+- aggregator: `scripts/32_aggregate_pairwise_results.py` (also runs an objective `\boxed{}` answer match for the 40 openmath prompts)
+- labels: `data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_labels.jsonl`
+- metrics: `data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_metrics.json`
+- report: `reports/phase_e_downstream_pairwise_report.md`
+
+Pairwise readout (200 valid labels):
+
+| Model | Avg rank ↓ | Correct rate | Win rate vs `unfiltered` | Math `\boxed{}` accuracy |
+|---|---:|---:|---:|---:|
+| `v4_both_keep` | **2.39** | **0.680** | 0.520 | **0.575 (23/40)** |
+| `v4_conservative_keep` | 2.510 | 0.595 | 0.515 | 0.475 (19/40) |
+| `v4_confident_keep` | 2.535 | 0.575 | 0.530 | 0.450 (18/40) |
+| `unfiltered` | 2.565 | 0.600 | — | 0.550 (22/40) |
+
+Conclusion: the BLEU/ROUGE proxy ranking is overturned. `v4_both_keep` wins on pairwise ranking and on the only objective signal (math `\boxed{}` match). All three filtered policies beat `unfiltered` head-to-head (51-53% win rate). Per-source breakdown: `v4_both_keep` is best on `finetome` and `openmath_reasoning`, but `v4_conservative_keep` is best on `cot_zh` — so a per-source filtering policy is the natural next experiment.
+
+Prepared downstream training datasets:
+
+| Dataset | Records | Purpose |
+|---|---:|---|
+| `phase_e_unfiltered_clean_15k` | 15,000 | clean-pool baseline |
+| `phase_e_v4_conservative_keep_clean_15k` | 10,301 | main scorer-filtered set |
+| `phase_e_v4_confident_keep_clean_15k` | 11,111 | stricter companion-filtered set |
+| `phase_e_v4_both_keep_clean_15k` | 10,206 | safest two-model keep intersection |
+
+V4 scorer agreement on the 15k pool:
+
+| Bucket | Records |
+|---|---:|
+| both keep | 10,206 |
+| conservative keep / confident not_keep | 95 |
+| conservative not_keep / confident keep | 905 |
+| both not_keep | 3,794 |
+
+Prepared downstream eval set:
+
+| Source | Records |
+|---|---:|
+| finetome | 80 |
+| cot_zh | 80 |
+| openmath_reasoning | 40 |
+| **Total** | **200** |
+
 Candidate groups:
 
 | Group | Purpose |
 |---|---|
 | unfiltered | baseline |
-| rule-clean only | rule baseline |
+| rule-clean only | rule baseline; omitted for the current 15k clean-pool run because it is identical to unfiltered |
 | v4 conservative keep | main scorer-filtered set |
 | v4 confident keep | stricter scorer-filtered set |
 | v4 conservative keep plus manual/top-confidence review | quality-prioritized variant |
@@ -284,4 +374,3 @@ Options:
 - Treat flagged metrics as secondary because flagged samples are already easier to catch with rules.
 - Treat evergreen_v2 as the main cross-version benchmark for now.
 - Treat downstream SFT validation as the final go/no-go test.
-
