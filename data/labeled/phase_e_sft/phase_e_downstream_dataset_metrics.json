@@ -1,0 +1,90 @@
+{
+  "candidate_records": 15000,
+  "candidate_ids": 15000,
+  "inputs": {
+    "candidates": "data\\splits\\phase_e\\phase_e_clean_candidate_15k.jsonl",
+    "v4_conservative": "data\\scored\\phase_e_v4_conservative_clean_15k.jsonl",
+    "v4_confident": "data\\scored\\phase_e_v4_confident_clean_15k.jsonl"
+  },
+  "outputs": {
+    "dataset_dir": "data\\labeled\\phase_e_sft",
+    "dataset_info": "data\\labeled\\phase_e_sft\\dataset_info.json"
+  },
+  "policies": {
+    "phase_e_unfiltered_clean_15k": {
+      "file": "data\\labeled\\phase_e_sft\\phase_e_unfiltered_clean_15k.jsonl",
+      "records": 15000,
+      "by_source": {
+        "cot_zh": 5698,
+        "finetome": 7863,
+        "openmath_reasoning": 1439
+      },
+      "by_language": {
+        "en": 9302,
+        "zh": 5698
+      },
+      "by_task_type": {
+        "general_instruction": 7863,
+        "math_reasoning": 7137
+      }
+    },
+    "phase_e_v4_conservative_keep_clean_15k": {
+      "file": "data\\labeled\\phase_e_sft\\phase_e_v4_conservative_keep_clean_15k.jsonl",
+      "records": 10301,
+      "by_source": {
+        "cot_zh": 3398,
+        "finetome": 5494,
+        "openmath_reasoning": 1409
+      },
+      "by_language": {
+        "en": 6903,
+        "zh": 3398
+      },
+      "by_task_type": {
+        "general_instruction": 5494,
+        "math_reasoning": 4807
+      }
+    },
+    "phase_e_v4_confident_keep_clean_15k": {
+      "file": "data\\labeled\\phase_e_sft\\phase_e_v4_confident_keep_clean_15k.jsonl",
+      "records": 11111,
+      "by_source": {
+        "cot_zh": 3861,
+        "finetome": 5836,
+        "openmath_reasoning": 1414
+      },
+      "by_language": {
+        "en": 7250,
+        "zh": 3861
+      },
+      "by_task_type": {
+        "general_instruction": 5836,
+        "math_reasoning": 5275
+      }
+    },
+    "phase_e_v4_both_keep_clean_15k": {
+      "file": "data\\labeled\\phase_e_sft\\phase_e_v4_both_keep_clean_15k.jsonl",
+      "records": 10206,
+      "by_source": {
+        "cot_zh": 3332,
+        "finetome": 5467,
+        "openmath_reasoning": 1407
+      },
+      "by_language": {
+        "en": 6874,
+        "zh": 3332
+      },
+      "by_task_type": {
+        "general_instruction": 5467,
+        "math_reasoning": 4739
+      }
+    }
+  },
+  "scorer_overlap": {
+    "both_keep": 10206,
+    "both_not_keep": 3794,
+    "conservative_not_keep_confident_keep": 905,
+    "conservative_keep_confident_not_keep": 95
+  },
+  "metrics_path": "\\\\ad.uillinois.edu\\engr-ews\\haoran27\\微调\\SFT-DataJudge\\data\\labeled\\phase_e_sft\\phase_e_downstream_dataset_metrics.json"
+}

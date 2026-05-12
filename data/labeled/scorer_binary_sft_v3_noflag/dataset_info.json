@@ -1,0 +1,38 @@
+{
+  "scorer_binary_v3_conservative_noflag_all": {
+    "file_name": "scorer_binary_v3_conservative_noflag_all.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "scorer_binary_v3_conservative_noflag_train": {
+    "file_name": "scorer_binary_v3_conservative_noflag_train.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "scorer_binary_v3_conservative_noflag_valid": {
+    "file_name": "scorer_binary_v3_conservative_noflag_valid.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "scorer_binary_v3_conservative_noflag_test": {
+    "file_name": "scorer_binary_v3_conservative_noflag_test.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  }
+}

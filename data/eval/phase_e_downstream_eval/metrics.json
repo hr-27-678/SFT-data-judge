@@ -1,0 +1,53 @@
+{
+  "total": 200,
+  "seed": 20260510,
+  "quotas": {
+    "finetome": 80,
+    "cot_zh": 80,
+    "openmath_reasoning": 40
+  },
+  "outputs": {
+    "sample": "data\\eval\\phase_e_downstream_eval\\sample.jsonl",
+    "metrics": "data\\eval\\phase_e_downstream_eval\\metrics.json",
+    "lf_dataset_dir": "data\\labeled\\phase_e_downstream_eval_lf",
+    "lf_dataset": "phase_e_downstream_eval_200",
+    "report": "reports\\phase_e_downstream_eval_sampling_report.md"
+  },
+  "excluded_ids": 27012,
+  "excluded_by_area": {
+    "data\\labeled": 22256,
+    "data\\splits\\teacher_judge": 4756,
+    "data\\splits\\phase_e": 0,
+    "data\\eval": 0
+  },
+  "raw_counts": {
+    "finetome": 100000,
+    "cot_zh": 74771,
+    "openmath_reasoning": 19252
+  },
+  "clean_counts": {
+    "finetome": 96561,
+    "cot_zh": 72355,
+    "openmath_reasoning": 19187
+  },
+  "eligible_counts": {
+    "finetome": 85329,
+    "cot_zh": 61834,
+    "openmath_reasoning": 15616
+  },
+  "by_source": {
+    "finetome": 80,
+    "openmath_reasoning": 40,
+    "cot_zh": 80
+  },
+  "by_language": {
+    "en": 120,
+    "zh": 80
+  },
+  "by_task_type": {
+    "general_instruction": 80,
+    "math_reasoning": 120
+  },
+  "duplicate_ids": 0,
+  "excluded_overlap": 0
+}

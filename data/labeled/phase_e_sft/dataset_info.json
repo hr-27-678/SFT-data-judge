@@ -1,0 +1,38 @@
+{
+  "phase_e_unfiltered_clean_15k": {
+    "file_name": "phase_e_unfiltered_clean_15k.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "phase_e_v4_conservative_keep_clean_15k": {
+    "file_name": "phase_e_v4_conservative_keep_clean_15k.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "phase_e_v4_confident_keep_clean_15k": {
+    "file_name": "phase_e_v4_confident_keep_clean_15k.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "phase_e_v4_both_keep_clean_15k": {
+    "file_name": "phase_e_v4_both_keep_clean_15k.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
+  }
+}

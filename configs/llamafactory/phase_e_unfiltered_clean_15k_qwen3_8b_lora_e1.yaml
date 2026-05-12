@@ -1,0 +1,42 @@
+### model
+model_name_or_path: Qwen/Qwen3-8B
+trust_remote_code: true
+
+### method
+stage: sft
+do_train: true
+finetuning_type: lora
+lora_rank: 8
+lora_target: all
+
+### dataset
+dataset_dir: U:/微调/SFT-DataJudge/data/labeled/phase_e_sft
+dataset: phase_e_unfiltered_clean_15k
+template: qwen3_nothink
+cutoff_len: 4096
+preprocessing_num_workers: 16
+dataloader_num_workers: 0
+
+### output
+output_dir: C:/Users/haoran27/llamafactory_outputs/phase_e_unfiltered_clean_15k_qwen3_8b_lora_e1
+logging_steps: 10
+save_steps: 100
+plot_loss: true
+overwrite_output_dir: true
+save_only_model: false
+report_to: none
+
+### train
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 16
+gradient_checkpointing: true
+learning_rate: 1.0e-4
+num_train_epochs: 1.0
+lr_scheduler_type: cosine
+warmup_steps: 20
+bf16: true
+ddp_timeout: 180000000
+resume_from_checkpoint: null
+
+### eval
+do_eval: false
