@@ -10,7 +10,8 @@ that should be versioned from generated artifacts that should stay local.
 - `README.md`
   - Public project overview and current headline result.
   - Current conclusion: Phase E downstream validation favors
-    `v4_both_keep`, with a per-source policy as the next experiment.
+    `v4_both_keep`; the per-source follow-up has completed train/predict and
+    awaits five-model teacher pairwise judging.
 - `PROJECT_PLAN.md`
   - Working project memory: current decisions, completed work, metrics, open
     questions, and next phase.
@@ -97,6 +98,7 @@ Important local generated artifacts include:
 - Phase E eval generated artifacts:
   - `data/eval/phase_e_downstream_eval/phase_e_downstream_prediction_comparison.jsonl`
   - `data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_labels.jsonl`
+  - `data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_labels_5model.jsonl`
 
 These may be valuable locally, but they are too large or too data-sensitive for
 the normal source repository.
@@ -111,6 +113,7 @@ LLaMA-Factory outputs are outside this repository and should stay local:
 - `C:\Users\haoran27\llamafactory_outputs\phase_e_v4_conservative_keep_clean_15k_qwen3_8b_lora_e1`
 - `C:\Users\haoran27\llamafactory_outputs\phase_e_v4_confident_keep_clean_15k_qwen3_8b_lora_e1`
 - `C:\Users\haoran27\llamafactory_outputs\phase_e_v4_both_keep_clean_15k_qwen3_8b_lora_e1`
+- `C:\Users\haoran27\llamafactory_outputs\phase_e_v4_persource_keep_clean_15k_qwen3_8b_lora_e1`
 
 Older v1-v3 scorer outputs are also local-only. Do not commit adapter weights,
 checkpoints, Hugging Face caches, or training logs unless there is a specific

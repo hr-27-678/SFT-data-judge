@@ -78,6 +78,23 @@
         "general_instruction": 5467,
         "math_reasoning": 4739
       }
+    },
+    "phase_e_v4_persource_keep_clean_15k": {
+      "file": "data\\labeled\\phase_e_sft\\phase_e_v4_persource_keep_clean_15k.jsonl",
+      "records": 10272,
+      "by_source": {
+        "cot_zh": 3398,
+        "finetome": 5467,
+        "openmath_reasoning": 1407
+      },
+      "by_language": {
+        "en": 6874,
+        "zh": 3398
+      },
+      "by_task_type": {
+        "general_instruction": 5467,
+        "math_reasoning": 4805
+      }
     }
   },
   "scorer_overlap": {

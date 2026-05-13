@@ -34,5 +34,14 @@
       "response": "output",
       "system": "system"
     }
+  },
+  "phase_e_v4_persource_keep_clean_15k": {
+    "file_name": "phase_e_v4_persource_keep_clean_15k.jsonl",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output",
+      "system": "system"
+    }
   }
 }

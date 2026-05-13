@@ -9,6 +9,8 @@ Default training policies:
 - phase_e_v4_conservative_keep_clean_15k: records kept by v4_conservative
 - phase_e_v4_confident_keep_clean_15k: records kept by v4_confident
 - phase_e_v4_both_keep_clean_15k: records kept by both v4 models
+- phase_e_v4_persource_keep_clean_15k: cot_zh uses v4_conservative keep;
+  finetome/openmath_reasoning use both-keep
 
 The rule-clean baseline is intentionally not emitted here: the default Phase E
 pool was already sampled with `is_clean=True` and no rule flags, so it would be
@@ -116,6 +118,19 @@ def validate_scored(
 
 def verdict(record_id: str, model_name: str, scored_by_model: dict[str, dict[str, dict[str, Any]]]) -> str:
     return str(scored_by_model[model_name][record_id].get("verdict"))
+
+
+def v4_both_keep(record: dict[str, Any], scored_by_model: dict[str, dict[str, dict[str, Any]]]) -> bool:
+    return (
+        verdict(record["id"], "v4_conservative", scored_by_model) == "keep"
+        and verdict(record["id"], "v4_confident", scored_by_model) == "keep"
+    )
+
+
+def v4_persource_keep(record: dict[str, Any], scored_by_model: dict[str, dict[str, dict[str, Any]]]) -> bool:
+    if record.get("source") == "cot_zh":
+        return verdict(record["id"], "v4_conservative", scored_by_model) == "keep"
+    return v4_both_keep(record, scored_by_model)
 
 
 def build_sft_record(
@@ -242,10 +257,18 @@ def write_report(
         "",
         *md_table(["Bucket", "Records"], overlap_rows),
         "",
+        "## Per-Source Policy",
+        "",
+        "`phase_e_v4_persource_keep_clean_15k` uses the current Phase E source-level readout:",
+        "",
+        "- `cot_zh`: keep records accepted by `v4_conservative`.",
+        "- `finetome` and `openmath_reasoning`: keep only records accepted by both v4 scorers.",
+        "",
         "## Notes",
         "",
         "- The rule-clean baseline is omitted because this Phase E pool was already sampled with `is_clean=True` and no rule flags.",
         "- `phase_e_v4_both_keep_clean_15k` is the safest high-precision policy: the intersection of the two v4 keep sets.",
+        "- `phase_e_v4_persource_keep_clean_15k` tests whether preserving more `cot_zh` data fixes the source-specific weakness seen in pairwise judging.",
         "- Use this directory as `dataset_dir` in LLaMA-Factory and choose one dataset name from `dataset_info.json`.",
         "",
     ]
@@ -279,10 +302,11 @@ def main() -> None:
         ),
         (
             "phase_e_v4_both_keep_clean_15k",
-            lambda record, scored: (
-                verdict(record["id"], "v4_conservative", scored) == "keep"
-                and verdict(record["id"], "v4_confident", scored) == "keep"
-            ),
+            v4_both_keep,
+        ),
+        (
+            "phase_e_v4_persource_keep_clean_15k",
+            v4_persource_keep,
         ),
     ]
 

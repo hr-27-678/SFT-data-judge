@@ -7,7 +7,8 @@ $Configs = @(
   "configs\llamafactory\phase_e_unfiltered_clean_15k_qwen3_8b_lora_e1.yaml",
   "configs\llamafactory\phase_e_v4_conservative_keep_clean_15k_qwen3_8b_lora_e1.yaml",
   "configs\llamafactory\phase_e_v4_confident_keep_clean_15k_qwen3_8b_lora_e1.yaml",
-  "configs\llamafactory\phase_e_v4_both_keep_clean_15k_qwen3_8b_lora_e1.yaml"
+  "configs\llamafactory\phase_e_v4_both_keep_clean_15k_qwen3_8b_lora_e1.yaml",
+  "configs\llamafactory\phase_e_v4_persource_keep_clean_15k_qwen3_8b_lora_e1.yaml"
 )
 
 Set-Location $Root

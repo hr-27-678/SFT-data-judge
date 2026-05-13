@@ -258,23 +258,28 @@ Current Phase E status:
   - `data/scored/phase_e_v4_confident_clean_15k.jsonl`
 - built downstream SFT datasets in `data/labeled/phase_e_sft/`
 - generated Phase E dataset report: `reports/phase_e_downstream_dataset_report.md`
-- prepared four Qwen3-8B LoRA e1 training configs under `configs/llamafactory/`
+- prepared five Qwen3-8B LoRA e1 training configs under `configs/llamafactory/`
 - built small held-out downstream eval set:
   - samples: `data/eval/phase_e_downstream_eval/sample.jsonl`
   - LLaMA-Factory dataset: `data/labeled/phase_e_downstream_eval_lf/`
   - report: `reports/phase_e_downstream_eval_sampling_report.md`
-- completed all four Phase E downstream Qwen3-8B LoRA e1 training runs:
+- completed five Phase E downstream Qwen3-8B LoRA e1 training runs:
   - `phase_e_unfiltered_clean_15k`
   - `phase_e_v4_conservative_keep_clean_15k`
   - `phase_e_v4_confident_keep_clean_15k`
   - `phase_e_v4_both_keep_clean_15k`
-- completed all four Phase E eval generations on the fixed 200-prompt set
+  - `phase_e_v4_persource_keep_clean_15k`
+- completed five Phase E eval generations on the fixed 200-prompt set
 - generated Phase E prediction comparison artifacts:
   - script: `scripts/30_compare_phase_e_downstream_predictions.py`
   - report: `reports/phase_e_downstream_prediction_comparison_report.md`
   - metrics: `data/eval/phase_e_downstream_eval/phase_e_downstream_prediction_comparison_metrics.json`
   - side-by-side predictions: `data/eval/phase_e_downstream_eval/phase_e_downstream_prediction_comparison.jsonl`
   - review queue: `data/eval/phase_e_downstream_eval/phase_e_downstream_review_queue.jsonl`
+- prepared five-model teacher pairwise judging:
+  - dry-run output: `data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_labels_5model_dryrun.jsonl`
+  - formal output target: `data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_labels_5model.jsonl`
+  - status: waiting for `TEACHER_API_KEY` or `OPENAI_API_KEY`
 
 Current automatic Phase E readout:
 
@@ -284,14 +289,25 @@ Current automatic Phase E readout:
 | `v4_conservative_keep` | 47.26 | 48.15 | 0.618 | 1.26 | 29 | 2 |
 | `v4_confident_keep` | 47.56 | 48.57 | 0.625 | 1.06 | 27 | 0 |
 | `v4_both_keep` | 46.65 | 47.77 | 0.619 | 1.07 | 22 | 1 |
+| `v4_persource_keep` | 46.39 | 47.55 | 0.616 | 1.23 | 28 | 2 |
+
+Openmath `\boxed{}` exact-match readout:
+
+| Model | Correct | Total | Accuracy |
+|---|---:|---:|---:|
+| `v4_both_keep` | **23** | 40 | **0.575** |
+| `unfiltered` | 22 | 40 | 0.550 |
+| `v4_persource_keep` | 20 | 40 | 0.500 |
+| `v4_conservative_keep` | 19 | 40 | 0.475 |
+| `v4_confident_keep` | 18 | 40 | 0.450 |
 
 Interpretation:
 
 - These are reference-overlap and surface-quality proxy metrics, not final quality judgments.
 - The filtered downstream models do not show an obvious aggregate proxy-metric improvement over the unfiltered baseline on the current 200-prompt eval set.
 - `v4_confident_keep` is closest to unfiltered by aggregate overlap and has fewer truncation issues.
-- `v4_both_keep` is not currently supported as a better downstream policy by these proxy metrics.
-- Next useful step is manual or teacher-judge review of `phase_e_downstream_review_queue.jsonl`, especially math/openmath and repeated/truncated generations.
+- `v4_persource_keep` does not improve the proxy metrics and does not beat `v4_both_keep` on openmath exact-answer accuracy.
+- `v4_both_keep` remains the current default unless the pending five-model teacher pairwise judge overturns the objective openmath signal.
 
 Completed teacher pairwise judge over the 200-prompt eval set (DeepSeek-v4-pro, all four models judged together per prompt with randomized A/B/C/D order):
 
@@ -311,7 +327,17 @@ Pairwise readout (200 valid labels):
 | `v4_confident_keep` | 2.535 | 0.575 | 0.530 | 0.450 (18/40) |
 | `unfiltered` | 2.565 | 0.600 | — | 0.550 (22/40) |
 
-Conclusion: the BLEU/ROUGE proxy ranking is overturned. `v4_both_keep` wins on pairwise ranking and on the only objective signal (math `\boxed{}` match). All three filtered policies beat `unfiltered` head-to-head (51-53% win rate). Per-source breakdown: `v4_both_keep` is best on `finetome` and `openmath_reasoning`, but `v4_conservative_keep` is best on `cot_zh` — so a per-source filtering policy is the natural next experiment.
+Conclusion: the BLEU/ROUGE proxy ranking is overturned. `v4_both_keep` wins on pairwise ranking and on the only objective signal (math `\boxed{}` match). All three filtered policies beat `unfiltered` head-to-head (51-53% win rate). Per-source breakdown: `v4_both_keep` is best on `finetome` and `openmath_reasoning`, but `v4_conservative_keep` is best on `cot_zh`; this motivated the per-source follow-up experiment.
+
+Per-source follow-up (2026-05-13):
+
+- policy: `cot_zh` uses `v4_conservative_keep`; `finetome` and `openmath_reasoning` use `v4_both_keep`
+- dataset: `phase_e_v4_persource_keep_clean_15k` with 10,272 records
+- training: completed one Qwen3-8B LoRA e1 epoch; final train loss about 0.486
+- prediction: completed all 200 held-out eval prompts
+- proxy comparison: no improvement over `v4_both_keep`
+- openmath exact match: 20/40, below `v4_both_keep` at 23/40
+- teacher pairwise: five-model prompt and scripts are ready; formal run is blocked until a teacher API key is available
 
 Prepared downstream training datasets:
 
@@ -321,6 +347,7 @@ Prepared downstream training datasets:
 | `phase_e_v4_conservative_keep_clean_15k` | 10,301 | main scorer-filtered set |
 | `phase_e_v4_confident_keep_clean_15k` | 11,111 | stricter companion-filtered set |
 | `phase_e_v4_both_keep_clean_15k` | 10,206 | safest two-model keep intersection |
+| `phase_e_v4_persource_keep_clean_15k` | 10,272 | source-aware follow-up policy |
 
 V4 scorer agreement on the 15k pool:
 
@@ -348,6 +375,7 @@ Candidate groups:
 | rule-clean only | rule baseline; omitted for the current 15k clean-pool run because it is identical to unfiltered |
 | v4 conservative keep | main scorer-filtered set |
 | v4 confident keep | stricter scorer-filtered set |
+| v4 per-source keep | `cot_zh` conservative keep plus both-keep for English/math |
 | v4 conservative keep plus manual/top-confidence review | quality-prioritized variant |
 | intersection or agreement of v4 conservative/confident | safest high-precision variant |
 

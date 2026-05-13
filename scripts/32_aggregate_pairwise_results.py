@@ -1,9 +1,9 @@
 """Aggregate pairwise teacher labels into per-model win rates and a markdown report.
 
-Reads:  data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_labels.jsonl
+Reads:  data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_labels_5model.jsonl
         data/eval/phase_e_downstream_eval/phase_e_downstream_prediction_comparison.jsonl
-Writes: data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_metrics.json
-        reports/phase_e_downstream_pairwise_report.md
+Writes: data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_5model_metrics.json
+        reports/phase_e_downstream_pairwise_5model_report.md
 
 Additionally, for openmath_reasoning, extracts \\boxed{...} answers from each
 model's prediction and compares against the reference, producing an objective
@@ -22,13 +22,13 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_LABELS = PROJECT_ROOT / "data" / "eval" / "phase_e_downstream_eval" / "phase_e_downstream_pairwise_labels.jsonl"
+DEFAULT_LABELS = PROJECT_ROOT / "data" / "eval" / "phase_e_downstream_eval" / "phase_e_downstream_pairwise_labels_5model.jsonl"
 DEFAULT_COMPARISON = PROJECT_ROOT / "data" / "eval" / "phase_e_downstream_eval" / "phase_e_downstream_prediction_comparison.jsonl"
-DEFAULT_METRICS = PROJECT_ROOT / "data" / "eval" / "phase_e_downstream_eval" / "phase_e_downstream_pairwise_metrics.json"
-DEFAULT_REPORT = PROJECT_ROOT / "reports" / "phase_e_downstream_pairwise_report.md"
+DEFAULT_METRICS = PROJECT_ROOT / "data" / "eval" / "phase_e_downstream_eval" / "phase_e_downstream_pairwise_5model_metrics.json"
+DEFAULT_REPORT = PROJECT_ROOT / "reports" / "phase_e_downstream_pairwise_5model_report.md"
 
-MODELS = ["unfiltered", "v4_conservative_keep", "v4_confident_keep", "v4_both_keep"]
-LETTERS = ["A", "B", "C", "D"]
+MODELS = ["unfiltered", "v4_conservative_keep", "v4_confident_keep", "v4_both_keep", "v4_persource_keep"]
+LETTERS = ["A", "B", "C", "D", "E"]
 
 
 def parse_args() -> argparse.Namespace:

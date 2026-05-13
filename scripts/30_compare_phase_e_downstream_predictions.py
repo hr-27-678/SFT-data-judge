@@ -1,7 +1,7 @@
 """Compare Phase E downstream eval predictions across filtering policies.
 
-This script joins the fixed 200-prompt downstream eval set with the four
-LLaMA-Factory prediction outputs. The metrics here are reference-overlap and
+This script joins the fixed downstream eval set with Phase E LLaMA-Factory
+prediction outputs. The metrics here are reference-overlap and
 surface-quality proxies; they are not a substitute for human or LLM judging.
 
 Outputs:
@@ -44,6 +44,10 @@ MODEL_RUNS = [
     (
         "v4_both_keep",
         "phase_e_v4_both_keep_clean_15k_qwen3_8b_lora_e1_predict_eval_200",
+    ),
+    (
+        "v4_persource_keep",
+        "phase_e_v4_persource_keep_clean_15k_qwen3_8b_lora_e1_predict_eval_200",
     ),
 ]
 
@@ -109,10 +113,65 @@ def rel(path: Path) -> str:
 
 
 TOKEN_RE = re.compile(r"[A-Za-z0-9_]+|[\u4e00-\u9fff]|[^\s]", re.UNICODE)
+BOXED_RE = re.compile(r"\\boxed\s*\{")
 
 
 def tokenize(text: str) -> list[str]:
     return [token.lower() for token in TOKEN_RE.findall(text or "")]
+
+
+def extract_boxed(text: str) -> str | None:
+    """Return the content of the last \\boxed{...}, handling nested braces."""
+    if not text:
+        return None
+    last = None
+    for match in BOXED_RE.finditer(text):
+        index = match.end()
+        depth = 1
+        buf: list[str] = []
+        while index < len(text) and depth > 0:
+            char = text[index]
+            if char == "{":
+                depth += 1
+                buf.append(char)
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+                buf.append(char)
+            else:
+                buf.append(char)
+            index += 1
+        if depth == 0:
+            last = "".join(buf)
+    return last
+
+
+_MATH_NORMALIZE_PATTERNS = [
+    (re.compile(r"\\!"), ""),
+    (re.compile(r"\\,"), ""),
+    (re.compile(r"\\;"), ""),
+    (re.compile(r"\\:"), ""),
+    (re.compile(r"\\ "), ""),
+    (re.compile(r"\\left"), ""),
+    (re.compile(r"\\right"), ""),
+    (re.compile(r"\s+"), ""),
+]
+
+
+def normalize_math_answer(text: str | None) -> str | None:
+    if text is None:
+        return None
+    normalized = text.strip()
+    for pattern, repl in _MATH_NORMALIZE_PATTERNS:
+        normalized = pattern.sub(repl, normalized)
+    return normalized
+
+
+def math_answers_match(reference: str | None, prediction: str | None) -> bool:
+    ref = normalize_math_answer(reference)
+    pred = normalize_math_answer(prediction)
+    return bool(ref and pred and ref == pred)
 
 
 def unigram_f1(prediction: str, reference: str) -> float:
@@ -299,6 +358,42 @@ def compare_against_baseline(joined: list[dict[str, Any]], baseline: str = "unfi
     return out
 
 
+def openmath_boxed_accuracy(joined: list[dict[str, Any]]) -> dict[str, Any]:
+    rows = []
+    per_model = {
+        model_name: {"extracted": 0, "correct": 0, "total": 0}
+        for model_name, _ in MODEL_RUNS
+    }
+
+    for record in joined:
+        if record.get("source") != "openmath_reasoning":
+            continue
+        ref_boxed = extract_boxed(str(record.get("reference_output", "")))
+        if ref_boxed is None:
+            continue
+        rows.append(record)
+        for model_name, _ in MODEL_RUNS:
+            prediction = record["predictions"][model_name]["predict"]
+            pred_boxed = extract_boxed(prediction)
+            per_model[model_name]["total"] += 1
+            if pred_boxed is not None:
+                per_model[model_name]["extracted"] += 1
+            if math_answers_match(ref_boxed, pred_boxed):
+                per_model[model_name]["correct"] += 1
+
+    return {
+        "n_math": len(rows),
+        "per_model": {
+            model_name: {
+                **counts,
+                "accuracy": counts["correct"] / counts["total"] if counts["total"] else None,
+                "extract_rate": counts["extracted"] / counts["total"] if counts["total"] else None,
+            }
+            for model_name, counts in per_model.items()
+        },
+    }
+
+
 def build_joined_records(
     eval_records: list[dict[str, Any]],
     predictions: dict[str, list[dict[str, Any]]],
@@ -447,9 +542,28 @@ def write_report(
             ]
         )
 
+    math_rows: list[list[Any]] = []
+    math_metrics = metrics["openmath_boxed_accuracy"]
+    for model_name, _ in MODEL_RUNS:
+        values = math_metrics["per_model"][model_name]
+        math_rows.append(
+            [
+                model_name,
+                values["extracted"],
+                values["correct"],
+                values["total"],
+                fmt_float(values["accuracy"], 3),
+                fmt_float(values["extract_rate"], 3),
+            ]
+        )
+
     best_bleu = max(MODEL_RUNS, key=lambda pair: metrics["models"][pair[0]]["llamafactory"]["predict_bleu-4"])[0]
     best_rouge_l = max(MODEL_RUNS, key=lambda pair: metrics["models"][pair[0]]["llamafactory"]["predict_rouge-l"])[0]
     best_f1 = max(MODEL_RUNS, key=lambda pair: metrics["models"][pair[0]]["avg_unigram_f1"])[0]
+    best_math = max(
+        MODEL_RUNS,
+        key=lambda pair: metrics["openmath_boxed_accuracy"]["per_model"][pair[0]]["accuracy"] or 0.0,
+    )[0]
 
     lines = [
         "# Phase E Downstream Prediction Comparison",
@@ -503,14 +617,25 @@ def write_report(
             ["---", "---:", "---:", "---:", "---:"],
         ),
         "",
+        "## OpenMath Boxed Accuracy",
+        "",
+        f"Records with reference `\\boxed{{}}`: {math_metrics['n_math']}",
+        "",
+        *md_table(
+            ["Model", "Extracted", "Correct", "Total", "Accuracy", "Extract rate"],
+            math_rows,
+            ["---", "---:", "---:", "---:", "---:", "---:"],
+        ),
+        "",
         "## Readout",
         "",
         f"- Best BLEU-4 proxy: `{best_bleu}`.",
         f"- Best ROUGE-L proxy: `{best_rouge_l}`.",
         f"- Best simple token-F1 proxy: `{best_f1}`.",
+        f"- Best openmath `\\boxed{{}}` exact match: `{best_math}`.",
         f"- Review queue size: {metrics['review_queue_size']} records.",
         "",
-        "Current proxy read: filtered downstream training does not show an obvious aggregate reference-overlap improvement over the unfiltered baseline on this 200-prompt eval set. `v4_confident_keep` is closest to the baseline by aggregate overlap; `v4_both_keep` is the weakest by these automatic proxies. This should be treated as a triage result, not a final quality verdict.",
+        "Current proxy read: use the reference-overlap numbers for triage only. The Phase E decision should be made by teacher pairwise ranking and task-specific objective checks. The openmath `\\boxed{}` table is the objective signal available without a teacher call.",
         "",
         "Recommended next step: manually or teacher-judge review the review queue, especially math/openmath cases and any repeated or truncated generations.",
     ]
@@ -534,6 +659,7 @@ def main() -> None:
             for model_name, _ in MODEL_RUNS
         },
         "vs_unfiltered": compare_against_baseline(joined),
+        "openmath_boxed_accuracy": openmath_boxed_accuracy(joined),
         "sources": sources,
         "outputs": {
             "metrics_json": rel(args.metrics_json),

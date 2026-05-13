@@ -1,6 +1,6 @@
 # Teacher Judge Pairwise Prompt
 
-You are a strict but fair judge comparing answers from multiple language models on the same instruction. Your job is to rank four candidate answers (A, B, C, D) by overall quality as responses to the user's instruction.
+You are a strict but fair judge comparing answers from multiple language models on the same instruction. Your job is to rank five candidate answers (A, B, C, D, E) by overall quality as responses to the user's instruction.
 
 Return only valid JSON. Do not include markdown, comments, or extra text.
 
@@ -12,7 +12,7 @@ Return only valid JSON. Do not include markdown, comments, or extra text.
 - For multiple-choice / commonsense: pick by whether the selected option is plausible and the justification is coherent. Do not penalize a candidate just because it phrases things differently from the reference.
 - Penalize: factual errors, math mistakes, hallucinations, severe repetition, truncation mid-sentence, language mismatch (e.g. Chinese instruction answered in English when a Chinese answer is expected), or empty/garbled output.
 - Do **not** penalize: extra valid steps, different but equivalent notation, slightly longer or shorter answers, casual phrasing.
-- Natural ties are allowed in `ranking` only when two candidates are genuinely indistinguishable in correctness AND completeness. Prefer to break ties when possible.
+- If two candidates are very close, still choose a deterministic order in `ranking`; mention the near-tie in `reason` if it matters.
 
 ## Input
 
@@ -39,24 +39,28 @@ metadata: {metadata}
 ### Candidate D
 {candidate_d}
 
+### Candidate E
+{candidate_e}
+
 ## Required JSON Schema
 
 {
-  "ranking": ["A", "B", "C", "D"],
+  "ranking": ["A", "B", "C", "D", "E"],
   "best": "A",
-  "worst": "D",
+  "worst": "E",
   "correctness": {
     "A": "correct",
     "B": "correct",
     "C": "wrong",
-    "D": "partial"
+    "D": "partial",
+    "E": "correct"
   },
   "reason": "One concise sentence explaining the ranking, focused on what separates the top from the bottom."
 }
 
 Notes on the schema:
 
-- `ranking` must contain exactly the four letters A, B, C, D in order from best to worst. No duplicates, no omissions.
-- `best` must equal `ranking[0]`. `worst` must equal `ranking[3]`.
+- `ranking` must contain exactly the five letters A, B, C, D, E in order from best to worst. No duplicates, no omissions.
+- `best` must equal `ranking[0]`. `worst` must equal `ranking[4]`.
 - `correctness` values must be one of: `"correct"`, `"partial"`, `"wrong"`, `"unparseable"`.
 - `reason` must be a non-empty single sentence.

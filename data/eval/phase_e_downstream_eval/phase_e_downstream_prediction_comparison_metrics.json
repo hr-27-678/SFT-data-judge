@@ -196,6 +196,55 @@
           "truncation_suspect": 0
         }
       }
+    },
+    "v4_persource_keep": {
+      "llamafactory": {
+        "predict_bleu-4": 46.388835,
+        "predict_model_preparation_time": 0.003,
+        "predict_rouge-1": 61.076842,
+        "predict_rouge-2": 40.853671,
+        "predict_rouge-l": 47.549236,
+        "predict_runtime": 2059.8214,
+        "predict_samples_per_second": 0.097,
+        "predict_steps_per_second": 0.097
+      },
+      "samples": 200,
+      "avg_unigram_f1": 0.6155231102017283,
+      "median_unigram_f1": 0.6234017676418451,
+      "avg_prediction_chars": 936.39,
+      "median_prediction_chars": 834.5,
+      "avg_length_ratio": 1.2313206897048807,
+      "empty": 0,
+      "too_short": 6,
+      "too_long": 12,
+      "repetition_suspect": 28,
+      "truncation_suspect": 2,
+      "by_source": {
+        "cot_zh": {
+          "samples": 80,
+          "avg_unigram_f1": 0.6057899364246654,
+          "avg_prediction_chars": 69.825,
+          "avg_length_ratio": 1.4015756329506122,
+          "repetition_suspect": 2,
+          "truncation_suspect": 0
+        },
+        "finetome": {
+          "samples": 80,
+          "avg_unigram_f1": 0.5658881033831978,
+          "avg_prediction_chars": 1452.1625,
+          "avg_length_ratio": 1.1927155398761224,
+          "repetition_suspect": 5,
+          "truncation_suspect": 2
+        },
+        "openmath_reasoning": {
+          "samples": 40,
+          "avg_unigram_f1": 0.734259471392915,
+          "avg_prediction_chars": 1637.975,
+          "avg_length_ratio": 0.968021102870934,
+          "repetition_suspect": 21,
+          "truncation_suspect": 0
+        }
+      }
     }
   },
   "vs_unfiltered": {
@@ -216,6 +265,52 @@
       "wins": 72,
       "losses": 75,
       "ties": 53
+    },
+    "v4_persource_keep": {
+      "avg_unigram_f1_delta": -0.013389996905061943,
+      "wins": 67,
+      "losses": 84,
+      "ties": 49
+    }
+  },
+  "openmath_boxed_accuracy": {
+    "n_math": 40,
+    "per_model": {
+      "unfiltered": {
+        "extracted": 35,
+        "correct": 22,
+        "total": 40,
+        "accuracy": 0.55,
+        "extract_rate": 0.875
+      },
+      "v4_conservative_keep": {
+        "extracted": 32,
+        "correct": 19,
+        "total": 40,
+        "accuracy": 0.475,
+        "extract_rate": 0.8
+      },
+      "v4_confident_keep": {
+        "extracted": 32,
+        "correct": 18,
+        "total": 40,
+        "accuracy": 0.45,
+        "extract_rate": 0.8
+      },
+      "v4_both_keep": {
+        "extracted": 36,
+        "correct": 23,
+        "total": 40,
+        "accuracy": 0.575,
+        "extract_rate": 0.9
+      },
+      "v4_persource_keep": {
+        "extracted": 34,
+        "correct": 20,
+        "total": 40,
+        "accuracy": 0.5,
+        "extract_rate": 0.85
+      }
     }
   },
   "sources": [

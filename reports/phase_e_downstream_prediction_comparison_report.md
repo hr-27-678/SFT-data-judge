@@ -21,6 +21,7 @@ These numbers are reference-overlap and surface-quality proxies. They can catch 
 | v4_conservative_keep | 47.26 | 61.33 | 41.75 | 48.15 | 0.618 | 1.26 | 953 | 29 | 2 | 35.2m |
 | v4_confident_keep | 47.56 | 61.50 | 41.64 | 48.57 | 0.625 | 1.06 | 897 | 27 | 0 | 32.8m |
 | v4_both_keep | 46.65 | 61.29 | 40.75 | 47.77 | 0.619 | 1.07 | 915 | 22 | 1 | 33.8m |
+| v4_persource_keep | 46.39 | 61.08 | 40.85 | 47.55 | 0.616 | 1.23 | 936 | 28 | 2 | 34.3m |
 
 ## Source Breakdown
 
@@ -30,14 +31,17 @@ These numbers are reference-overlap and surface-quality proxies. They can catch 
 | cot_zh | v4_conservative_keep | 80 | 0.609 | 1.42 | 68 | 2 | 0 |
 | cot_zh | v4_confident_keep | 80 | 0.615 | 1.08 | 53 | 0 | 0 |
 | cot_zh | v4_both_keep | 80 | 0.609 | 1.05 | 52 | 0 | 0 |
+| cot_zh | v4_persource_keep | 80 | 0.606 | 1.40 | 70 | 2 | 0 |
 | finetome | unfiltered | 80 | 0.584 | 1.11 | 1385 | 6 | 1 |
 | finetome | v4_conservative_keep | 80 | 0.562 | 1.22 | 1474 | 8 | 2 |
 | finetome | v4_confident_keep | 80 | 0.574 | 1.07 | 1339 | 4 | 0 |
 | finetome | v4_both_keep | 80 | 0.576 | 1.13 | 1393 | 4 | 1 |
+| finetome | v4_persource_keep | 80 | 0.566 | 1.19 | 1452 | 5 | 2 |
 | openmath_reasoning | unfiltered | 40 | 0.736 | 0.94 | 1599 | 21 | 0 |
 | openmath_reasoning | v4_conservative_keep | 40 | 0.746 | 0.99 | 1683 | 19 | 0 |
 | openmath_reasoning | v4_confident_keep | 40 | 0.749 | 1.00 | 1701 | 23 | 0 |
 | openmath_reasoning | v4_both_keep | 40 | 0.728 | 1.00 | 1684 | 18 | 0 |
+| openmath_reasoning | v4_persource_keep | 40 | 0.734 | 0.97 | 1638 | 21 | 0 |
 
 ## Versus Unfiltered
 
@@ -46,14 +50,28 @@ These numbers are reference-overlap and surface-quality proxies. They can catch 
 | v4_conservative_keep | -0.0114 | 69 | 75 | 56 |
 | v4_confident_keep | -0.0035 | 71 | 71 | 58 |
 | v4_both_keep | -0.0096 | 72 | 75 | 53 |
+| v4_persource_keep | -0.0134 | 67 | 84 | 49 |
+
+## OpenMath Boxed Accuracy
+
+Records with reference `\boxed{}`: 40
+
+| Model | Extracted | Correct | Total | Accuracy | Extract rate |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| unfiltered | 35 | 22 | 40 | 0.550 | 0.875 |
+| v4_conservative_keep | 32 | 19 | 40 | 0.475 | 0.800 |
+| v4_confident_keep | 32 | 18 | 40 | 0.450 | 0.800 |
+| v4_both_keep | 36 | 23 | 40 | 0.575 | 0.900 |
+| v4_persource_keep | 34 | 20 | 40 | 0.500 | 0.850 |
 
 ## Readout
 
 - Best BLEU-4 proxy: `unfiltered`.
 - Best ROUGE-L proxy: `unfiltered`.
 - Best simple token-F1 proxy: `unfiltered`.
+- Best openmath `\boxed{}` exact match: `v4_both_keep`.
 - Review queue size: 60 records.
 
-Current proxy read: filtered downstream training does not show an obvious aggregate reference-overlap improvement over the unfiltered baseline on this 200-prompt eval set. `v4_confident_keep` is closest to the baseline by aggregate overlap; `v4_both_keep` is the weakest by these automatic proxies. This should be treated as a triage result, not a final quality verdict.
+Current proxy read: use the reference-overlap numbers for triage only. The Phase E decision should be made by teacher pairwise ranking and task-specific objective checks. The openmath `\boxed{}` table is the objective signal available without a teacher call.
 
 Recommended next step: manually or teacher-judge review the review queue, especially math/openmath cases and any repeated or truncated generations.

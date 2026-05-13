@@ -20,16 +20,16 @@ Start with:
 ### Phase E Downstream Validation
 
 - `phase_e_downstream_pairwise_report.md`
-  - Current strongest evidence. Teacher pairwise judge over the four downstream
+  - Current strongest evidence. Teacher pairwise judge over the original four downstream
     Qwen3-8B LoRA models plus openmath `\boxed{}` exact-match accuracy.
   - Current winner: `v4_both_keep`.
 - `phase_e_downstream_prediction_comparison_report.md`
-  - BLEU/ROUGE/token-F1 comparison. Kept as a cautionary proxy-metric report:
-    it ranks `unfiltered` first, but pairwise judging and math accuracy overturn
-    that result.
+  - Five-model BLEU/ROUGE/token-F1 comparison plus openmath `\boxed{}` exact
+    match. The proxy metrics still rank `unfiltered` first, but the objective
+    math signal still favors `v4_both_keep`.
 - `phase_e_downstream_dataset_report.md`
-  - Describes the four 15k downstream training datasets and v4 scorer agreement
-    buckets.
+  - Describes the five downstream training datasets and v4 scorer agreement
+    buckets, including the per-source follow-up policy.
 - `phase_e_downstream_eval_sampling_report.md`
   - Documents the fixed 200-prompt downstream eval set.
 - `phase_e_clean_candidate_sampling_report.md`

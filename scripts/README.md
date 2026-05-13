@@ -18,29 +18,31 @@ print Chinese examples.
 - `27_sample_phase_e_candidates.py`
   - Samples the fixed exclusion-safe 15k clean downstream candidate pool.
 - `28_build_phase_e_downstream_datasets.py`
-  - Joins v4 scorer outputs with the 15k pool and builds four LLaMA-Factory
+  - Joins v4 scorer outputs with the 15k pool and builds five LLaMA-Factory
     downstream SFT datasets: unfiltered, v4 conservative keep, v4 confident
-    keep, and v4 both-keep intersection.
+    keep, v4 both-keep intersection, and v4 per-source keep.
 - `run_phase_e_downstream_train.ps1`
-  - Runs the four Phase E downstream train configs.
+  - Runs the five Phase E downstream train configs.
 - Phase E prediction configs live in `configs/llamafactory/` and are named
   `phase_e_*_predict_eval_200.yaml`.
 - `29_sample_phase_e_downstream_eval.py`
   - Builds the fixed 200-prompt held-out eval set and its LLaMA-Factory
     dataset.
 - `30_compare_phase_e_downstream_predictions.py`
-  - Compares the four generated prediction files with BLEU/ROUGE/token-F1 and
-    writes the side-by-side review queue.
+  - Compares the generated prediction files with BLEU/ROUGE/token-F1, writes
+    the side-by-side review queue, and computes openmath `\boxed{}` exact
+    match.
 - `31_teacher_judge_pairwise.py`
-  - Runs the teacher pairwise judge over the four downstream models. It supports
+  - Runs the teacher pairwise judge over the five downstream models. It supports
     dry-run rendering, concurrency, response-format JSON mode, and resume.
 - `32_aggregate_pairwise_results.py`
   - Aggregates pairwise labels into model rankings, win rates, per-source
     metrics, and openmath `\boxed{}` exact-match accuracy.
 
-Current readout: `v4_both_keep` is the best downstream policy overall, but
-`v4_conservative_keep` is best on `cot_zh`. The next natural experiment is a
-per-source policy.
+Current readout: `v4_both_keep` remains the best downstream policy overall.
+The per-source follow-up has completed train/predict and objective openmath
+checking; five-model teacher pairwise judging is prepared but still needs a
+teacher API key.
 
 ## Evergreen Evaluation
 

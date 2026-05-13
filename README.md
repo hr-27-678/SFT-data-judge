@@ -1,6 +1,6 @@
 # SFT-DataJudge
 
-Last updated: 2026-05-11
+Last updated: 2026-05-13
 
 SFT-DataJudge is a project for building a small, local binary scorer that filters supervised fine-tuning samples before they enter an SFT training run.
 
@@ -59,6 +59,8 @@ The 200 prediction sets were judged in two independent ways:
 
 Two independent signals point the same way: `v4_both_keep` is the best downstream policy. It has the lowest average rank, the highest teacher-judged correctness rate, and the highest math exact-answer accuracy. `unfiltered` is fourth on the pairwise metric and second on math accuracy. All three filtered policies beat `unfiltered` head-to-head (51-53% win rate).
 
+A fifth per-source follow-up policy has now been trained and predicted: use `v4_conservative_keep` for `cot_zh`, and `v4_both_keep` for `finetome` and `openmath_reasoning`. Its teacher pairwise run is prepared but still needs a teacher API key. The objective openmath check does not beat the current winner: `v4_persource_keep` gets 20/40, while `v4_both_keep` remains best at 23/40.
+
 ### Why the earlier proxy-metric report disagreed
 
 An earlier BLEU/ROUGE/Token-F1 comparison showed `unfiltered` as the strongest model. That was an artifact of how those metrics work, not real quality:
@@ -79,7 +81,7 @@ Average rank by source (lower is better, 1.0 = always first):
 | cot_zh (Chinese reasoning) | 80 | 2.538 | **2.388** | 2.475 | 2.60 |
 | openmath_reasoning | 40 | 2.45 | 2.625 | 2.60 | **2.325** |
 
-`v4_both_keep` dominates English and math but is weakest on Chinese reasoning. The likely cause is that requiring both scorers to agree on `keep` filters Chinese samples most aggressively, so the downstream model sees less Chinese training data. A follow-up experiment with a per-source filtering policy (use `v4_both_keep` for English/math, `v4_conservative_keep` for `cot_zh`) is the natural next step.
+`v4_both_keep` dominates English and math but is weakest on Chinese reasoning. The likely cause is that requiring both scorers to agree on `keep` filters Chinese samples most aggressively, so the downstream model sees less Chinese training data. The per-source follow-up tests that hypothesis; early proxy and openmath-objective checks do not yet justify replacing `v4_both_keep`, so the remaining decision point is the five-model teacher pairwise judge.
 
 ### Scorer-level metrics (still relevant for understanding the filter)
 
@@ -92,7 +94,7 @@ The scorer family that produced these downstream gains is `v4`, evaluated on the
 | `v4_conservative` | 77.75 | 36.18 | 80.91 | 96.21 | precision-leaning filter |
 | `v4_confident` | 76.50 | 28.46 | 85.37 | 97.83 | stricter companion filter |
 
-Scorer selection rule (used inside Phase E to construct the four downstream training sets):
+Scorer selection rule (used inside Phase E to construct the downstream training sets):
 
 > Maximize clean `not_keep` recall, subject to clean `not_keep` precision >= 75%, clean `keep` recall >= 95%, valid JSON rate = 100%, and no obvious prompt shortcut dependence.
 
@@ -164,9 +166,9 @@ Three overlapping lessons from this project:
 
 ## Important Reports
 
-- `reports/phase_e_downstream_pairwise_report.md` — teacher pairwise judge over the 4 downstream models, plus math accuracy
-- `reports/phase_e_downstream_prediction_comparison_report.md` — earlier BLEU/ROUGE/Token-F1 comparison (kept as a cautionary example)
-- `reports/phase_e_downstream_dataset_report.md` — how the four 15k filtered training sets were built
+- `reports/phase_e_downstream_pairwise_report.md` — teacher pairwise judge over the original 4 downstream models, plus math accuracy
+- `reports/phase_e_downstream_prediction_comparison_report.md` — five-model BLEU/ROUGE/Token-F1 comparison plus openmath `\boxed{}` exact match
+- `reports/phase_e_downstream_dataset_report.md` — how the five Phase E downstream training sets were built
 - `reports/evergreen_v2_all_models_eval_report.md` — scorer-level metrics with the normal prompt
 - `reports/evergreen_v2_noflag_all_models_eval_report.md` — scorer-level metrics with `rule_*` fields removed
 - `reports/training_lessons_and_notes.md`
@@ -174,8 +176,8 @@ Three overlapping lessons from this project:
 
 ## Next Work
 
-1. Per-source filtering policy: use `v4_both_keep` for English and math, `v4_conservative_keep` for `cot_zh`. Train one more downstream model and re-run pairwise judge to confirm.
-2. Scale up: apply the winning policy to a larger SFT pool and verify that the downstream gain persists past 15k records.
-3. Small human audit of evergreen labels to estimate the teacher-label noise floor (still outstanding from before Phase E).
-4. Confidence calibration on the scorer (Phase F): probabilistic output instead of binary, to enable top-K filtering.
-
+1. Run the five-model teacher pairwise judge for `v4_persource_keep` once `TEACHER_API_KEY` or `OPENAI_API_KEY` is available.
+2. Keep `v4_both_keep` as the current default unless the five-model judge clearly overturns the objective openmath signal.
+3. Scale up: apply the winning policy to a larger SFT pool and verify that the downstream gain persists past 15k records.
+4. Small human audit of evergreen labels to estimate the teacher-label noise floor.
+5. Confidence calibration on the scorer (Phase F): probabilistic output instead of binary, to enable top-K filtering.

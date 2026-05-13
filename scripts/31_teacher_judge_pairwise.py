@@ -1,12 +1,12 @@
-"""Pairwise Teacher Judge over the 4 phase_e downstream models.
+"""Pairwise Teacher Judge over the Phase E downstream models.
 
-For each eval prompt, send the 4 candidate model outputs to the teacher in a
-randomized A/B/C/D order and ask for a full ranking. Output JSONL records
+For each eval prompt, send the candidate model outputs to the teacher in a
+randomized A/B/C/D/E order and ask for a full ranking. Output JSONL records
 include the letter->model mapping so downstream aggregation can recover which
 real model placed where.
 
 Reads:  data/eval/phase_e_downstream_eval/phase_e_downstream_prediction_comparison.jsonl
-Writes: data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_labels.jsonl
+Writes: data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_labels_5model.jsonl
 
 Environment variables required for real runs (set them before running):
   TEACHER_API_KEY
@@ -33,15 +33,15 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INPUT = PROJECT_ROOT / "data" / "eval" / "phase_e_downstream_eval" / "phase_e_downstream_prediction_comparison.jsonl"
 DEFAULT_PROMPT = PROJECT_ROOT / "prompts" / "teacher_judge_pairwise_prompt.md"
-DEFAULT_OUTPUT = PROJECT_ROOT / "data" / "eval" / "phase_e_downstream_eval" / "phase_e_downstream_pairwise_labels.jsonl"
+DEFAULT_OUTPUT = PROJECT_ROOT / "data" / "eval" / "phase_e_downstream_eval" / "phase_e_downstream_pairwise_labels_5model.jsonl"
 
-LETTERS = ["A", "B", "C", "D"]
-MODELS = ["unfiltered", "v4_conservative_keep", "v4_confident_keep", "v4_both_keep"]
+LETTERS = ["A", "B", "C", "D", "E"]
+MODELS = ["unfiltered", "v4_conservative_keep", "v4_confident_keep", "v4_both_keep", "v4_persource_keep"]
 VALID_CORRECTNESS = {"correct", "partial", "wrong", "unparseable"}
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Pairwise teacher judge over 4 downstream models.")
+    parser = argparse.ArgumentParser(description="Pairwise teacher judge over Phase E downstream models.")
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--prompt-template", type=Path, default=DEFAULT_PROMPT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
@@ -135,6 +135,7 @@ def render_prompt(template: str, record: dict[str, Any], letter_to_model: dict[s
         "{candidate_b}": trim(get_pred(letter_to_model["B"]), max_candidate_chars),
         "{candidate_c}": trim(get_pred(letter_to_model["C"]), max_candidate_chars),
         "{candidate_d}": trim(get_pred(letter_to_model["D"]), max_candidate_chars),
+        "{candidate_e}": trim(get_pred(letter_to_model["E"]), max_candidate_chars),
     }
     prompt = template
     for k, v in replacements.items():
@@ -167,8 +168,8 @@ def extract_json_object(text: str) -> dict[str, Any]:
 def validate_label(label: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     ranking = label.get("ranking")
-    if not isinstance(ranking, list) or len(ranking) != 4 or sorted(ranking) != LETTERS:
-        errors.append("ranking must be a permutation of ['A','B','C','D']")
+    if not isinstance(ranking, list) or len(ranking) != len(LETTERS) or sorted(ranking) != LETTERS:
+        errors.append(f"ranking must be a permutation of {LETTERS}")
     best = label.get("best")
     worst = label.get("worst")
     if isinstance(ranking, list) and len(ranking) == 4:
