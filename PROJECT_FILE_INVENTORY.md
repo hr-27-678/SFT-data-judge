@@ -1,240 +1,153 @@
 # Project File Inventory
 
-Last updated: 2026-05-05
+Last updated: 2026-05-13
 
-This file is a GitHub handoff checklist for the current project directory. It
-separates source files, reports, generated data, and local-only artifacts.
+This is the repository hygiene checklist for SFT-DataJudge. It separates files
+that should be versioned from generated artifacts that should stay local.
 
-## Top-Level Files
+## Canonical Entry Points
 
 - `README.md`
-  - Main project entrypoint.
-  - Up to date with the compact baseline, both v2 8B candidates, the 3,600-row
-    pilot inference result, v3 training/evaluation results, and next actions.
+  - Public project overview and current headline result.
+  - Current conclusion: Phase E downstream validation favors
+    `v4_both_keep`, with a per-source policy as the next experiment.
 - `PROJECT_PLAN.md`
-  - Current plan, status board, completed artifacts, best result, and
-    recommended next steps.
+  - Working project memory: current decisions, completed work, metrics, open
+    questions, and next phase.
 - `PROJECT_FILE_INVENTORY.md`
-  - This file.
-- `.gitignore`
-  - Updated to ignore generated JSONL data, local model outputs, logs, caches,
-    and environment files.
-- `explore_data.ipynb`
-  - Exploratory notebook from the data-inspection stage.
-  - Optional for GitHub. It is not the canonical pipeline.
+  - This repository cleanup and handoff checklist.
+- `scripts/README.md`
+  - Current script map from data prep through Phase E pairwise judging.
+- `reports/README.md`
+  - Current report map with canonical vs historical status.
 
-## Configs And Prompts
+## Source Files To Commit
+
+### Scripts
+
+Commit all files under `scripts/` except caches. The current script sequence is
+`01_*` through `32_*`, plus PowerShell runners:
+
+- Data preparation and teacher labeling: `01` through `05`, `11`, `13`, `14`.
+- Binary scorer build/eval/inference: `06` through `10`, `12`.
+- Evergreen and v4 data construction: `15` through `26`.
+- Phase E downstream validation: `27` through `32`.
+- Local runners/utilities:
+  - `run_all_evergreen_inferences.ps1`
+  - `run_all_evergreen_noflag_inferences.ps1`
+  - `run_all_evergreen_v2_inferences.ps1`
+  - `run_phase_e_downstream_train.ps1`
+  - `start_llamafactory_webui.ps1`
+  - `verify_evergreen_labels.py`
+
+Do not commit `scripts/__pycache__/`.
+
+### Configs And Prompts
 
 - `configs/teacher_sampling.json`
-  - Teacher sampling configuration.
 - `configs/teacher_judge.json`
-  - Teacher-labeling configuration.
-- `configs/llamafactory/scorer_binary_confident_1000_qwen3_8b_lora_e3.yaml`
-  - LLaMA-Factory training config for the Qwen3-8B v1 binary scorer.
-- `configs/llamafactory/scorer_binary_confident_1000_qwen3_8b_lora_predict_valid.yaml`
-  - LLaMA-Factory greedy valid prediction config for the Qwen3-8B v1 scorer.
-- `configs/llamafactory/scorer_binary_confident_1000_qwen3_8b_lora_predict_test.yaml`
-  - LLaMA-Factory greedy test prediction config for the Qwen3-8B v1 scorer.
-- `configs/llamafactory/scorer_binary_v2_conservative_qwen3_8b_lora_e3.yaml`
-  - LLaMA-Factory training config for the Qwen3-8B v2 conservative scorer.
-- `configs/llamafactory/scorer_binary_v2_conservative_qwen3_8b_lora_predict_valid.yaml`
-  - LLaMA-Factory greedy valid prediction config for the Qwen3-8B v2 scorer.
-- `configs/llamafactory/scorer_binary_v2_conservative_qwen3_8b_lora_predict_test.yaml`
-  - LLaMA-Factory greedy test prediction config for the Qwen3-8B v2 scorer.
-- `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_e3.yaml`
-  - LLaMA-Factory training config for the completed Qwen3-8B v2 confident
-    ablation.
-- `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_predict_valid.yaml`
-  - Greedy valid prediction config for the Qwen3-8B v2 confident ablation.
-- `configs/llamafactory/scorer_binary_v2_confident_qwen3_8b_lora_predict_test.yaml`
-  - Greedy test prediction config for the Qwen3-8B v2 confident ablation.
-- `configs/llamafactory/scorer_binary_v3_conservative_qwen3_8b_lora_e3.yaml`
-  - Prepared LLaMA-Factory training config for the Qwen3-8B v3 conservative
-    scorer.
-- `configs/llamafactory/scorer_binary_v3_conservative_qwen3_8b_lora_predict_valid.yaml`
-  - Greedy valid prediction config for the Qwen3-8B v3 conservative scorer.
-- `configs/llamafactory/scorer_binary_v3_conservative_qwen3_8b_lora_predict_test.yaml`
-  - Greedy test prediction config for the Qwen3-8B v3 conservative scorer.
-- `configs/llamafactory/scorer_binary_v3_confident_qwen3_8b_lora_e3.yaml`
-  - Prepared LLaMA-Factory training config for the Qwen3-8B v3 confident
-    scorer.
-- `configs/llamafactory/scorer_binary_v3_confident_qwen3_8b_lora_predict_valid.yaml`
-  - Greedy valid prediction config for the Qwen3-8B v3 confident scorer.
-- `configs/llamafactory/scorer_binary_v3_confident_qwen3_8b_lora_predict_test.yaml`
-  - Greedy test prediction config for the Qwen3-8B v3 confident scorer.
+- `configs/llamafactory/*.yaml`
+  - Scorer train/predict configs for v1 through v4.
+  - Evergreen and evergreen_v2 predict configs.
+  - Phase E downstream train/predict configs.
 - `prompts/teacher_judge_prompt.md`
-  - Teacher rubric prompt template.
+- `prompts/teacher_judge_pairwise_prompt.md`
 
-These should be committed unless they contain private paths or secrets.
+These should be committed unless a future config contains a private path,
+credential, or machine-specific secret.
 
-## Scripts
+### Reports And Metadata
 
-See `scripts/README.md` for the ordered script index.
+Commit markdown reports and small metadata JSON files that explain generated
+datasets or completed experiments:
 
-Current scripts:
+- `reports/*.md`
+- `data/labeled/**/dataset_info.json`
+- `data/labeled/**/*_report.md`
+- `data/eval/**/*_metrics.json`
+- `data/eval/*_ids.json`
 
-- `scripts/01_prepare_data.py`
-- `scripts/02_sample_for_teacher.py`
-- `scripts/03_build_pilot.py`
-- `scripts/04_teacher_judge.py`
-- `scripts/05_analyze_teacher_labels.py`
-- `scripts/06_build_scorer_sft.py`
-- `scripts/07_evaluate_scorer_predictions.py`
-- `scripts/08_analyze_scorer_errors.py`
-- `scripts/09_build_binary_scorer_sft.py`
-- `scripts/10_evaluate_binary_scorer_predictions.py`
-- `scripts/11_build_targeted_teacher_batch.py`
-- `scripts/12_infer_binary_scorer.py`
-- `scripts/13_build_teacher_review_batch.py`
-- `scripts/14_analyze_teacher_review_priority.py`
-- `scripts/start_llamafactory_webui.ps1`
-- `scripts/README.md`
+The markdown reports are intentionally kept even when historical; they are the
+experiment audit trail.
 
-Do not commit `scripts/__pycache__/`; it is ignored.
+## Generated Data To Keep Local
 
-## Reports
+These are generated artifacts and should normally remain ignored:
 
-See `reports/README.md` for the report index.
-
-All markdown files under `reports/` use the same opening structure:
-
-- `Report Metadata`
-- `Experiment Context`
-
-Canonical current reports:
-
-- `reports/scorer_binary_experiment_report.md`
-- `reports/scorer_binary_eval_valid_report.md`
-- `reports/scorer_binary_eval_test_report.md`
-- `reports/scorer_binary_qwen3_8b_v1_experiment_report.md`
-- `reports/scorer_binary_eval_valid_qwen3_8b_v1_report.md`
-- `reports/scorer_binary_eval_test_qwen3_8b_v1_report.md`
-- `reports/scorer_binary_v2_conservative_qwen3_8b_experiment_report.md`
-- `reports/scorer_binary_v2_conservative_eval_valid_report.md`
-- `reports/scorer_binary_v2_conservative_eval_test_report.md`
-- `reports/scorer_binary_v2_confident_qwen3_8b_experiment_report.md`
-- `reports/scorer_binary_v2_confident_eval_valid_report.md`
-- `reports/scorer_binary_v2_confident_eval_test_report.md`
-- `reports/teacher_candidates_all_v2_model_agreement_report.md`
-- `reports/teacher_candidates_all_v2_conservative_inference_report.md`
-- `reports/teacher_candidates_all_v2_confident_inference_report.md`
-- `reports/teacher_candidates_all_v2_priority_teacher_analysis_report.md`
-- `reports/teacher_label_report_v2active001.md`
-- `reports/teacher_sampling_v2_active_pilot_001_report.md`
-- `reports/scorer_binary_v3_qwen3_8b_experiment_report.md`
-- `reports/scorer_binary_v3_conservative_eval_valid_report.md`
-- `reports/scorer_binary_v3_conservative_eval_test_report.md`
-- `reports/scorer_binary_v3_confident_eval_valid_report.md`
-- `reports/scorer_binary_v3_confident_eval_test_report.md`
-- `reports/training_lessons_and_notes.md`
-- `reports/teacher_sampling_targeted_1200_report.md`
-- `reports/teacher_label_report_targeted_1200.md`
-- `reports/scorer_error_analysis_greedy_report.md`
-- `reports/teacher_label_report_1000.md`
-- `reports/teacher_sampling_starter_1000_report.md`
-- `data/labeled/scorer_binary_sft/scorer_binary_confident_1000_report.md`
-- `data/labeled/scorer_sft/scorer_sft_report.md`
-
-Historical reports are kept for traceability, especially the original 1-5 scorer
-reports and pilot reports.
-
-## Generated Data Directories
-
-These directories contain generated artifacts and are mostly ignored by
-`.gitignore`.
-
+- `data/raw/`
 - `data/processed/`
-  - Normalized source data and summary JSON.
-  - JSONL files should not be committed.
-- `data/splits/`
-  - Teacher-candidate splits and sampling summaries.
-  - JSONL files should not be committed.
+- `data/splits/**/*.jsonl`
+- `data/splits/**/*.json`
+- `data/labeled/**/*.jsonl`
 - `data/labeled/teacher_judge/`
-  - Teacher prompts and teacher labels.
-  - JSONL files should not be committed unless the repository is private and
-    the data-sharing policy is clear.
-  - Current dry-run prompt file:
-    `v2_pilot_top919/v2_pilot_top919_teacher_prompts.jsonl`.
-  - Current active-learning dry-run prompt file:
-    `v2active001/v2active001_teacher_prompts.jsonl`.
-- `data/labeled/scorer_sft/`
-  - Original 1-5 scorer SFT JSONL files.
-  - `dataset_info.json` and `scorer_sft_report.md` are useful metadata.
-- `data/labeled/scorer_binary_sft/`
-  - Binary confident scorer SFT JSONL files.
-  - `dataset_info.json` and `scorer_binary_confident_1000_report.md` are useful
-    metadata.
-- `data/labeled/scorer_binary_sft_v2/`
-  - V2 binary scorer SFT JSONL files built from starter + targeted teacher
-    labels.
-  - `dataset_info.json`, `scorer_binary_v2_confident_report.md`, and
-    `scorer_binary_v2_conservative_report.md` are useful metadata.
-- `data/labeled/scorer_binary_sft_v3/`
-  - V3 binary scorer SFT JSONL files built from starter + targeted +
-    `v2active001` teacher labels.
-  - Ready for training but not yet trained/evaluated.
-  - Conservative: 2,588 records; score 3 maps to `not_keep`.
-  - Confident: 2,326 records; score 3 is skipped.
-  - `dataset_info.json`, `scorer_binary_v3_confident_report.md`, and
-    `scorer_binary_v3_conservative_report.md` are useful metadata.
-- `data/eval/`
-  - Small generated metric JSON files.
-  - Optional to commit. The markdown reports already summarize the important
-    metrics.
-  - Current v2 metrics:
-    `scorer_binary_v2_conservative_eval_valid_metrics.json`,
-    `scorer_binary_v2_conservative_eval_test_metrics.json`,
-    `scorer_binary_v2_confident_eval_valid_metrics.json`, and
-    `scorer_binary_v2_confident_eval_test_metrics.json`.
-  - Current v3 metrics:
-    `scorer_binary_v3_conservative_eval_valid_metrics.json`,
-    `scorer_binary_v3_conservative_eval_test_metrics.json`,
-    `scorer_binary_v3_confident_eval_valid_metrics.json`, and
-    `scorer_binary_v3_confident_eval_test_metrics.json`.
 - `data/scored/`
-  - Batch scorer inference outputs for unlabeled or teacher-candidate pools.
-  - Current important local pilot artifacts:
-    `teacher_candidates_all_v2_model_agreement_metrics.json`,
-    `teacher_candidates_all_v2_model_disagreements.jsonl`, and
-    `teacher_candidates_all_v2_teacher_review_priority.jsonl`.
-  - First teacher-labeling subset:
-    `teacher_candidates_all_v2_teacher_review_top919.jsonl`.
-  - Large prediction JSONL files are generated artifacts and should normally
-    stay local.
-- `data/splits/teacher_judge/v2_active_pilot_001/`
-  - Deduplicated active-learning teacher candidates selected by
-    `scripts/13_build_teacher_review_batch.py`.
-  - Contains the 388-record `v2active001` teacher batch and 827
-    already-labeled matches for analysis.
-  - JSONL files are generated artifacts and should stay local.
+- `data/_archive/`
+- `outputs/`
+- local LLaMA-Factory outputs/checkpoints/logs
+
+Important local generated artifacts include:
+
+- Phase E candidate pool:
+  - `data/splits/phase_e/phase_e_clean_candidate_15k.jsonl`
+- Phase E scored pools:
+  - `data/scored/phase_e_v4_conservative_clean_15k.jsonl`
+  - `data/scored/phase_e_v4_confident_clean_15k.jsonl`
+- Phase E downstream training datasets:
+  - `data/labeled/phase_e_sft/*.jsonl`
+- Phase E eval generated artifacts:
+  - `data/eval/phase_e_downstream_eval/phase_e_downstream_prediction_comparison.jsonl`
+  - `data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_labels.jsonl`
+
+These may be valuable locally, but they are too large or too data-sensitive for
+the normal source repository.
 
 ## Local-Only Model Artifacts
 
 LLaMA-Factory outputs are outside this repository and should stay local:
 
-- `C:\Users\haoran27\llamafactory_outputs\scorer_sft_1000_qwen3_4b_lora_e3`
-- `C:\Users\haoran27\llamafactory_outputs\scorer_binary_confident_1000_qwen3_4b_lora_e3`
-- `C:\Users\haoran27\llamafactory_outputs\scorer_binary_confident_1000_qwen3_8b_lora_e3`
-- `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v2_conservative_qwen3_8b_lora_e3`
-- `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v2_confident_qwen3_8b_lora_e3`
-  - Completed Qwen3-8B v2 confident ablation from 2026-05-03.
+- `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v4_conservative_qwen3_8b_lora_e3`
+- `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v4_confident_qwen3_8b_lora_e3`
+- `C:\Users\haoran27\llamafactory_outputs\phase_e_unfiltered_clean_15k_qwen3_8b_lora_e1`
+- `C:\Users\haoran27\llamafactory_outputs\phase_e_v4_conservative_keep_clean_15k_qwen3_8b_lora_e1`
+- `C:\Users\haoran27\llamafactory_outputs\phase_e_v4_confident_keep_clean_15k_qwen3_8b_lora_e1`
+- `C:\Users\haoran27\llamafactory_outputs\phase_e_v4_both_keep_clean_15k_qwen3_8b_lora_e1`
 
-Current v3 local model outputs:
+Older v1-v3 scorer outputs are also local-only. Do not commit adapter weights,
+checkpoints, Hugging Face caches, or training logs unless there is a specific
+release plan.
 
-- `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v3_conservative_qwen3_8b_lora_e3`
-- `C:\Users\haoran27\llamafactory_outputs\scorer_binary_v3_confident_qwen3_8b_lora_e3`
+## Optional Or Non-Canonical Files
 
-Do not commit model checkpoints, adapter weights, Hugging Face caches, or
-training logs unless there is a specific release plan.
+- `explore_data.ipynb`
+  - Exploratory notebook from the data-inspection stage. It is not part of the
+    canonical pipeline. Keep it only if the notebook remains useful for manual
+    exploration.
+- `notebooks/`
+  - Currently not used by the canonical pipeline.
+- `outputs/`
+  - Smoke-test outputs; ignored and safe to regenerate.
+
+## Ignored Cleanup Rules
+
+`.gitignore` should keep the working tree quiet for generated data:
+
+- JSONL/JSON under `data/processed`, `data/labeled`, `data/scored`, and
+  `data/splits`.
+- `data/_archive/`.
+- Dry-run eval JSONL files matching `data/eval/**/*_dryrun.jsonl`.
+- Backup files matching `*.bak_before_*`.
+- Caches, logs, local environments, model weights, and output directories.
 
 ## GitHub Checklist
 
 Before pushing:
 
-1. Initialize Git if needed. This directory currently may not have `.git`.
-2. Check `git status --short --ignored`.
-3. Confirm no API keys or `.env` files are tracked.
-4. Confirm generated JSONL files are ignored.
-5. Decide whether to commit `explore_data.ipynb`.
-6. Commit source scripts, configs, prompts, markdown reports, and small metadata
-   files.
+1. Run `git status --short --ignored`.
+2. Confirm only source, configs, prompts, markdown reports, and small metadata
+   are staged.
+3. Confirm no API keys, `.env` files, model weights, checkpoint directories, or
+   large JSONL files are staged.
+4. Re-read `README.md`, `PROJECT_PLAN.md`, `scripts/README.md`, and
+   `reports/README.md` after major experiment phases.
+5. Decide explicitly whether to keep or remove `explore_data.ipynb` before a
+   public release.

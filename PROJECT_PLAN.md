@@ -1,6 +1,6 @@
 # Project Plan
 
-Last updated: 2026-05-11
+Last updated: 2026-05-13
 
 This file is the working project memory for SFT-DataJudge. The README explains the project to readers; this plan tracks what has been done, what the current decision is, and what should happen next.
 
@@ -53,6 +53,15 @@ Done:
 - LLaMA-Factory train/predict configs
 - evaluation scripts for in-domain and evergreen tests
 - cross-version evergreen reporting
+
+### Repository Hygiene
+
+Done on 2026-05-13:
+
+- refreshed `scripts/README.md` through the Phase E pairwise judge scripts
+- refreshed `reports/README.md` to separate current canonical reports from historical reports
+- refreshed `PROJECT_FILE_INVENTORY.md` as the current GitHub handoff checklist
+- updated `.gitignore` for archived generated data, dry-run eval JSONL files, and pre-replacement backups
 
 ### Scorer Versions
 

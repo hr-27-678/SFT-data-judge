@@ -7,6 +7,9 @@ data/scored/**/*.jsonl
 data/scored/**/*.json
 data/splits/**/*.jsonl
 data/splits/**/*.json
+data/_archive/
+data/eval/**/*_dryrun.jsonl
+*.bak_before_*
 
 # Model and experiment outputs
 outputs/
@@ -29,6 +32,7 @@ venv/
 # Local secrets and environment files
 .env
 .env.*
+.claude/
 
 # Large model artifacts, if any are accidentally written inside the repo
 *.safetensors
