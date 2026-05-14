@@ -64,6 +64,9 @@ teacher API key.
   - Builds no-flag prompt datasets for shortcut-ablation runs.
 - `23_sample_evergreen_human_verify.py`
   - Samples the 50-record evergreen human-audit set.
+- `33_analyze_human_verify.py`
+  - Parses the completed human-audit annotation file and writes labels,
+    metrics, and the human verification report.
 - `24_merge_evergreen_v2.py`
   - Merges evergreen pieces into `evergreen_v2`.
 - `25_generate_evergreen_v2_predict_configs.py`
@@ -106,6 +109,9 @@ teacher API key.
   - Samples targeted hard clean `cot_zh` records for v4.
 - `26_prepare_v4_label_splits.py`
   - Prepares the v4 merged label splits after active-learning additions.
+- `34_sample_v5_math_code_hard_negatives.py`
+  - Samples a targeted v5 teacher batch for math/code hard negatives and
+    keep controls.
 
 ## Scorer Dataset, Inference, And Eval
 

@@ -231,6 +231,39 @@ Weakness:
 
 - lower precision and lower keep recall mean it throws away more good data
 
+## Human Audit
+
+The 50-record evergreen human audit is complete.
+
+Outputs:
+
+- filled annotation form: `data/eval/evergreen_human_verify/annotation.md`
+- parsed labels: `data/eval/evergreen_human_verify/human_labels.jsonl`
+- metrics: `data/eval/evergreen_human_verify/human_audit_metrics.json`
+- report: `reports/evergreen_human_verify_report.md`
+
+Headline:
+
+- exact 3-way teacher/human verdict agreement: 43/50 = 86.0%
+- exact score agreement: 38/50 = 76.0%
+- within-one score agreement: 47/50 = 94.0%
+- conservative binary agreement: 46/50 = 92.0%
+
+Interpretation:
+
+- The audit does not show a large DeepSeek teacher-label failure rate on the sampled evergreen subset.
+- Most disagreement is boundary movement between `maybe`, `keep`, and `not_keep`, not complete reversals.
+- The audit confirms a data-coverage problem for math/code: the openmath slice is 5/5 human `keep`, and the code/programming heuristic slice has no human `not_keep`.
+- Future v5 data should deliberately add real math/code hard negatives; another generic active-learning round is not enough.
+
+Immediate follow-up prepared:
+
+- script: `scripts/34_sample_v5_math_code_hard_negatives.py`
+- candidate batch: `data/splits/teacher_judge/v5_math_code_hard_negatives/v5_math_code_hardneg_teacher_candidates_all.jsonl`
+- report: `reports/teacher_sampling_v5_math_code_hard_negatives_report.md`
+- size: 600 records = 375 openmath + 225 code/programming
+- reasons: 291 heuristic answer mismatches, 9 missing boxed answers, 145 Python syntax errors, 5 missing-code responses, 150 keep controls
+
 ## Remaining Tests
 
 No more evergreen_v2 prediction tests are required right now. The normal and no-flag runs are complete for all current models.
@@ -246,9 +279,9 @@ Still useful for a clean v4 release record:
 
 Also still useful:
 
-- finish human audit in `data/eval/evergreen_human_verify/annotation.md`
-- estimate teacher-label noise floor
-- expand evergreen openmath bad-sample support
+- normalize the one human score/verdict mismatch in the audit if these labels are ever reused for training
+- expand evergreen and v5 training support for math/code clean `not_keep` examples
+- estimate teacher-label noise floor again after adding a larger math/code hard-negative audit slice
 
 ## Next Phase
 
@@ -419,9 +452,10 @@ Priority order:
    - Rationale: the Phase E baseline pool is already rule-clean and drawn from relatively high-quality public SFT sources.
 2. Expand scorer-level evaluation with `evergreen_v3`.
    - Add more openmath clean `not_keep` support.
+   - Add math/code hard negatives with real failure modes, not only generic disagreement cases.
    - Add at least one OOD source beyond `cot_zh`, `finetome`, and `openmath_reasoning`.
    - Keep normal and no-flag prompt variants.
-   - Include a small human audit subset to estimate teacher-label noise.
+   - Include a larger human audit subset for math/code because the first audit had no openmath human `not_keep`.
 3. Expand downstream evaluation beyond the current 200 prompts.
    - Target at least 600-1000 held-out prompts.
    - Keep source-balanced slices with enough openmath/math prompts for objective checks.
@@ -429,6 +463,8 @@ Priority order:
 4. Run a v5 active-learning loop.
    - Prioritize real hard cases rather than broad synthetic negatives.
    - Focus on scorer disagreement buckets, clean-looking bad examples, openmath final-answer/reasoning failures, and OOD source samples.
+   - Do not rely only on disagreement from the previous scorer family; it can inherit the previous model's blind spots.
+   - Add targeted math/code mining: expected-answer mismatches, missing final answers, invalid `\boxed{}` answers, code syntax/runtime failures, and API/spec mismatch cases.
    - Use the scorer to select candidates, but use teacher labels as the training target.
 5. Scale up downstream SFT validation.
    - Move from the 15k clean pool to a larger pool, such as 50k or 100k.
@@ -460,6 +496,7 @@ Options:
 5. Which OOD source should be added first for scorer and downstream validation?
 6. Is v4 confident useful as a high-precision reject/review model, or mainly as a keep-intersection companion?
 7. Can v5 improve openmath clean-bad detection without hurting keep recall on high-quality math samples?
+8. How can we mine enough code `not_keep` samples without teaching the scorer that code/math tasks are generally low quality?
 
 ## Decision Log
 

@@ -173,6 +173,8 @@ Three overlapping lessons from this project:
 - `reports/phase_e_downstream_dataset_report.md` — how the five Phase E downstream training sets were built
 - `reports/evergreen_v2_all_models_eval_report.md` — scorer-level metrics with the normal prompt
 - `reports/evergreen_v2_noflag_all_models_eval_report.md` — scorer-level metrics with `rule_*` fields removed
+- `reports/evergreen_human_verify_report.md` — 50-record human audit of evergreen teacher labels
+- `reports/teacher_sampling_v5_math_code_hard_negatives_report.md` — targeted v5 math/code hard-negative teacher batch
 - `reports/training_lessons_and_notes.md`
 - `reports/teacher_candidates_all_v2_model_agreement_report.md`
 
@@ -181,8 +183,8 @@ Three overlapping lessons from this project:
 1. Freeze the current v4 conclusion: keep `v4_both_keep` as the default filtered policy, but describe its advantage over `unfiltered` as modest.
 2. Expand evaluation before another major training push: build `evergreen_v3` for scorer-level testing and a larger Phase E downstream eval set beyond the current 200 prompts.
 3. Add out-of-distribution sources beyond `cot_zh`, `finetome`, and `openmath_reasoning`, both for scorer stress tests and downstream SFT validation.
-4. Run a v5 active-learning loop focused on real hard cases, especially openmath clean `not_keep`, scorer disagreement buckets, and OOD clean-looking bad samples.
+4. Run a v5 active-learning loop focused on real hard cases, especially openmath/code clean `not_keep`, scorer disagreement buckets, and OOD clean-looking bad samples. Do not rely only on prior-scorer disagreement because it can inherit the previous scorer's blind spots.
 5. Scale up downstream validation to a larger clean SFT pool, such as 50k or 100k records, with `unfiltered`, rule-clean, `v4_both_keep`, and v5 policies compared on the same eval.
 6. Add bootstrap confidence intervals for pairwise win rates so small margins such as 105/95 are not overinterpreted.
-7. Small human audit of evergreen labels to estimate the teacher-label noise floor.
+7. Extend the human audit with a targeted math/code hard-negative slice; the first 50-record audit found high overall teacher-human agreement but no openmath human `not_keep` examples.
 8. Confidence calibration on the scorer (Phase F): probabilistic output or logits instead of binary-only verdicts, enabling top-K filtering and review routing.
