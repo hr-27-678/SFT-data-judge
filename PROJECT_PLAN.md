@@ -1,6 +1,6 @@
 # Project Plan
 
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 This file is the working project memory for SFT-DataJudge. The README explains the project to readers; this plan tracks what has been done, what the current decision is, and what should happen next.
 
@@ -17,10 +17,16 @@ Current model decision:
 - **Primary candidate:** `v4_conservative`
 - **Secondary companion:** `v4_confident`
 - **Aggressive review reference:** `v3_conservative`
+- **Current downstream filtering default:** `v4_both_keep`
 
 Reason:
 
 `v4_conservative` gives the best current balance for automatic filtering. It has lower clean `not_keep` recall than `v3_conservative`, but much better `not_keep` precision and `keep` recall, which matters when the scorer is allowed to remove data from the downstream SFT pool.
+
+For downstream SFT, the best current policy is the two-scorer intersection:
+keep a sample only when both `v4_conservative` and `v4_confident` predict
+`keep`. This produces a modest but consistent quality signal over a strong
+`unfiltered` baseline on the current 15k clean-pool Phase E run.
 
 ## Selection Criteria
 
@@ -276,10 +282,11 @@ Current Phase E status:
   - metrics: `data/eval/phase_e_downstream_eval/phase_e_downstream_prediction_comparison_metrics.json`
   - side-by-side predictions: `data/eval/phase_e_downstream_eval/phase_e_downstream_prediction_comparison.jsonl`
   - review queue: `data/eval/phase_e_downstream_eval/phase_e_downstream_review_queue.jsonl`
-- prepared five-model teacher pairwise judging:
-  - dry-run output: `data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_labels_5model_dryrun.jsonl`
-  - formal output target: `data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_labels_5model.jsonl`
-  - status: waiting for `TEACHER_API_KEY` or `OPENAI_API_KEY`
+- completed five-model teacher pairwise judging:
+  - labels: `data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_labels_5model.jsonl`
+  - metrics: `data/eval/phase_e_downstream_eval/phase_e_downstream_pairwise_5model_metrics.json`
+  - report: `reports/phase_e_downstream_pairwise_5model_report.md`
+  - note: the raw labels file has retry/failure rows, but exactly 200 valid unique eval ids were judged
 
 Current automatic Phase E readout:
 
@@ -307,7 +314,7 @@ Interpretation:
 - The filtered downstream models do not show an obvious aggregate proxy-metric improvement over the unfiltered baseline on the current 200-prompt eval set.
 - `v4_confident_keep` is closest to unfiltered by aggregate overlap and has fewer truncation issues.
 - `v4_persource_keep` does not improve the proxy metrics and does not beat `v4_both_keep` on openmath exact-answer accuracy.
-- `v4_both_keep` remains the current default unless the pending five-model teacher pairwise judge overturns the objective openmath signal.
+- `v4_both_keep` remains the current default filtered policy, but the advantage over `unfiltered` is modest rather than decisive.
 
 Completed teacher pairwise judge over the 200-prompt eval set (DeepSeek-v4-pro, all four models judged together per prompt with randomized A/B/C/D order):
 
@@ -337,7 +344,24 @@ Per-source follow-up (2026-05-13):
 - prediction: completed all 200 held-out eval prompts
 - proxy comparison: no improvement over `v4_both_keep`
 - openmath exact match: 20/40, below `v4_both_keep` at 23/40
-- teacher pairwise: five-model prompt and scripts are ready; formal run is blocked until a teacher API key is available
+- five-model teacher pairwise: completed
+
+Five-model pairwise readout (200 valid labels):
+
+| Model | Avg rank ↓ | Correct rate | Wrong rate | Win rate vs `unfiltered` | Math `\boxed{}` accuracy |
+|---|---:|---:|---:|---:|---:|
+| `v4_both_keep` | **2.855** | **0.695** | **0.185** | 0.525 | **0.575 (23/40)** |
+| `v4_persource_keep` | 2.950 | 0.645 | 0.205 | 0.500 | 0.500 (20/40) |
+| `unfiltered` | 3.035 | 0.605 | 0.250 | — | 0.550 (22/40) |
+| `v4_confident_keep` | 3.045 | 0.625 | 0.250 | 0.525 | 0.450 (18/40) |
+| `v4_conservative_keep` | 3.115 | 0.635 | 0.250 | 0.485 | 0.475 (19/40) |
+
+Five-model conclusion:
+
+- `v4_both_keep` remains the best current filtered policy and should stay the default.
+- The margin over `unfiltered` is small: head-to-head is 105/200, and openmath exact match is 23/40 vs 22/40.
+- This is still meaningful because the Phase E pool is already rule-clean and drawn from relatively high-quality public SFT sources; a large gain was not expected.
+- `v4_persource_keep` improves the `cot_zh` slice but loses too much on `finetome` and `openmath_reasoning` to replace `v4_both_keep`.
 
 Prepared downstream training datasets:
 
@@ -385,6 +409,38 @@ Decision target:
 - data volume remains large enough
 - filtered data has visibly fewer corrupted, wrong, irrelevant, or incomplete samples
 
+### Future Work After Break
+
+Priority order:
+
+1. Freeze the current v4 release conclusion.
+   - Default filtered policy: `v4_both_keep`.
+   - Claim strength: modest downstream quality signal, not a decisive win over `unfiltered`.
+   - Rationale: the Phase E baseline pool is already rule-clean and drawn from relatively high-quality public SFT sources.
+2. Expand scorer-level evaluation with `evergreen_v3`.
+   - Add more openmath clean `not_keep` support.
+   - Add at least one OOD source beyond `cot_zh`, `finetome`, and `openmath_reasoning`.
+   - Keep normal and no-flag prompt variants.
+   - Include a small human audit subset to estimate teacher-label noise.
+3. Expand downstream evaluation beyond the current 200 prompts.
+   - Target at least 600-1000 held-out prompts.
+   - Keep source-balanced slices with enough openmath/math prompts for objective checks.
+   - Add an OOD eval slice so downstream results are not only three-source in-domain.
+4. Run a v5 active-learning loop.
+   - Prioritize real hard cases rather than broad synthetic negatives.
+   - Focus on scorer disagreement buckets, clean-looking bad examples, openmath final-answer/reasoning failures, and OOD source samples.
+   - Use the scorer to select candidates, but use teacher labels as the training target.
+5. Scale up downstream SFT validation.
+   - Move from the 15k clean pool to a larger pool, such as 50k or 100k.
+   - Compare `unfiltered`, rule-clean, `v4_both_keep`, and v5 policies under the same eval.
+   - Track whether filtering still helps when data volume and diversity increase.
+6. Add uncertainty estimates to the evaluation.
+   - Bootstrap pairwise win rates and average ranks.
+   - Treat small margins such as 105/95 as directional unless confidence intervals support a stronger claim.
+7. Continue into Phase F calibration.
+   - Recover logits or train confidence-aware JSON outputs.
+   - Use confidence for top-K filtering, review routing, and disagreement triage.
+
 ### Phase F: Better Calibration
 
 Current scorer output is binary JSON. For ranking and top-K filtering, it would be useful to produce or recover confidence.
@@ -398,10 +454,12 @@ Options:
 ## Open Questions
 
 1. How much clean `not_keep` recall is enough before downstream SFT gains appear?
-2. What is the real teacher-label noise floor on evergreen_v2?
-3. Does v4 conservative improve downstream SFT quality more than a rule-clean baseline?
-4. Is v4 confident useful as a high-precision reject model, or does it miss too much?
-5. Should the next evergreen version include an OOD source such as alpaca, wizardlm, or ultrachat?
+2. What is the real teacher-label noise floor on evergreen_v2 and future evergreen_v3?
+3. Does `v4_both_keep` still help when the downstream pool grows from 15k to 50k/100k?
+4. How much of the current modest gain survives bootstrap confidence intervals?
+5. Which OOD source should be added first for scorer and downstream validation?
+6. Is v4 confident useful as a high-precision reject/review model, or mainly as a keep-intersection companion?
+7. Can v5 improve openmath clean-bad detection without hurting keep recall on high-quality math samples?
 
 ## Decision Log
 
@@ -411,3 +469,5 @@ Options:
 - Treat flagged metrics as secondary because flagged samples are already easier to catch with rules.
 - Treat evergreen_v2 as the main cross-version benchmark for now.
 - Treat downstream SFT validation as the final go/no-go test.
+- Do not overstate small Phase E margins; `v4_both_keep` is the current default because it is the best tested filtered policy, not because it decisively beats `unfiltered`.
+- Prioritize real teacher-confirmed hard negatives over broad synthetic not_keep generation.

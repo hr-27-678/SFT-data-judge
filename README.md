@@ -1,6 +1,6 @@
 # SFT-DataJudge
 
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 SFT-DataJudge is a project for building a small, local binary scorer that filters supervised fine-tuning samples before they enter an SFT training run.
 
@@ -41,25 +41,26 @@ This project builds a learned quality filter using teacher-labeled data and test
 
 The headline result is now on **downstream SFT quality**, not scorer-level classification metrics. The scorer is only useful if it improves the model trained on the data it keeps. Phase E tests that directly.
 
-### Downstream filtering policy: `v4_both_keep` wins
+### Downstream filtering policy: `v4_both_keep` remains the default
 
-Four Qwen3-8B LoRA models were trained on the same 15k clean candidate pool, filtered under four different policies, then evaluated on a fixed 200-prompt held-out set spanning `finetome`, `cot_zh`, and `openmath_reasoning`.
+Five Qwen3-8B LoRA models were trained on the same 15k clean candidate pool, filtered under different policies, then evaluated on a fixed 200-prompt held-out set spanning `finetome`, `cot_zh`, and `openmath_reasoning`.
 
 The 200 prediction sets were judged in two independent ways:
 
-1. **Teacher pairwise ranking** (DeepSeek-v4-pro). For each prompt, all four model outputs are anonymized as A/B/C/D in a per-prompt randomized order and ranked together. Position bias is removed by hashing the prompt id to seed the shuffle.
+1. **Teacher pairwise ranking** (DeepSeek-v4-pro). For each prompt, all five model outputs are anonymized as A/B/C/D/E in a per-prompt randomized order and ranked together. Position bias is removed by hashing the prompt id to seed the shuffle.
 2. **Math `\boxed{}` exact match** on the 40 `openmath_reasoning` prompts. Fully objective, does not depend on teacher judgment.
 
 | Model | Avg rank ↓ | Teacher correct rate ↑ | Math `\boxed{}` accuracy ↑ | Win rate vs `unfiltered` |
 |---|---:|---:|---:|---:|
-| **`v4_both_keep`** | **2.39** | **0.680** | **0.575** | 0.520 |
-| `v4_conservative_keep` | 2.510 | 0.595 | 0.475 | 0.515 |
-| `v4_confident_keep` | 2.535 | 0.575 | 0.450 | 0.530 |
-| `unfiltered` | 2.565 | 0.600 | 0.550 | — |
+| **`v4_both_keep`** | **2.855** | **0.695** | **0.575** | 0.525 |
+| `v4_persource_keep` | 2.950 | 0.645 | 0.500 | 0.500 |
+| `unfiltered` | 3.035 | 0.605 | 0.550 | — |
+| `v4_confident_keep` | 3.045 | 0.625 | 0.450 | 0.525 |
+| `v4_conservative_keep` | 3.115 | 0.635 | 0.475 | 0.485 |
 
-Two independent signals point the same way: `v4_both_keep` is the best downstream policy. It has the lowest average rank, the highest teacher-judged correctness rate, and the highest math exact-answer accuracy. `unfiltered` is fourth on the pairwise metric and second on math accuracy. All three filtered policies beat `unfiltered` head-to-head (51-53% win rate).
+The five-model judge does not show a large margin over `unfiltered`: `v4_both_keep` beats `unfiltered` 105/200 head-to-head, and the openmath advantage is 23/40 vs 22/40. The useful conclusion is narrower and more defensible: on an already rule-clean, relatively high-quality public SFT pool, the scorer still contributes a modest quality signal. `v4_both_keep` uses about one-third fewer records than `unfiltered` while achieving the best average rank, highest teacher correctness rate, lowest wrong rate, and best openmath exact-answer accuracy among the tested policies.
 
-A fifth per-source follow-up policy has now been trained and predicted: use `v4_conservative_keep` for `cot_zh`, and `v4_both_keep` for `finetome` and `openmath_reasoning`. Its teacher pairwise run is prepared but still needs a teacher API key. The objective openmath check does not beat the current winner: `v4_persource_keep` gets 20/40, while `v4_both_keep` remains best at 23/40.
+The fifth per-source follow-up policy uses `v4_conservative_keep` for `cot_zh`, and `v4_both_keep` for `finetome` and `openmath_reasoning`. It improves the `cot_zh` slice, but it does not replace the default: it trails `v4_both_keep` overall, loses on openmath exact match (20/40 vs 23/40), and loses head-to-head against `v4_both_keep` by 96/104.
 
 ### Why the earlier proxy-metric report disagreed
 
@@ -67,7 +68,7 @@ An earlier BLEU/ROUGE/Token-F1 comparison showed `unfiltered` as the strongest m
 
 - Reference answers in the eval set are drawn from the unfiltered training distribution. `unfiltered` learned to mimic their surface phrasing, which inflates reference-overlap scores even when the answer is wrong.
 - `v4_both_keep` produces shorter, more direct answers (length ratio 1.07 vs `unfiltered`'s 1.20), which depresses ROUGE recall while improving actual answer quality.
-- On the 40 math prompts where correctness can be checked objectively, the BLEU/ROUGE ranking is flipped: `v4_both_keep` is most correct, `unfiltered` is third, and the two single-policy filtered models trail.
+- On the 40 math prompts where correctness can be checked objectively, the BLEU/ROUGE ranking is flipped: `v4_both_keep` is most correct, `unfiltered` is second, and the filtered alternatives trail.
 
 Lesson: do not select a downstream filtering policy by automatic surface-overlap metrics on this kind of held-out eval. Use a stronger judge or task-specific objective correctness when available.
 
@@ -75,13 +76,13 @@ Lesson: do not select a downstream filtering policy by automatic surface-overlap
 
 Average rank by source (lower is better, 1.0 = always first):
 
-| Source | N | `unfiltered` | `v4_conservative_keep` | `v4_confident_keep` | `v4_both_keep` |
-|---|---:|---:|---:|---:|---:|
-| finetome (general English) | 80 | 2.65 | 2.575 | 2.562 | **2.212** |
-| cot_zh (Chinese reasoning) | 80 | 2.538 | **2.388** | 2.475 | 2.60 |
-| openmath_reasoning | 40 | 2.45 | 2.625 | 2.60 | **2.325** |
+| Source | N | `unfiltered` | `v4_conservative_keep` | `v4_confident_keep` | `v4_both_keep` | `v4_persource_keep` |
+|---|---:|---:|---:|---:|---:|---:|
+| finetome (general English) | 80 | 3.138 | 3.250 | 3.100 | **2.663** | 2.850 |
+| cot_zh (Chinese reasoning) | 80 | 2.913 | 3.025 | 2.975 | 3.200 | **2.888** |
+| openmath_reasoning | 40 | 3.075 | 3.025 | 3.075 | **2.550** | 3.275 |
 
-`v4_both_keep` dominates English and math but is weakest on Chinese reasoning. The likely cause is that requiring both scorers to agree on `keep` filters Chinese samples most aggressively, so the downstream model sees less Chinese training data. The per-source follow-up tests that hypothesis; early proxy and openmath-objective checks do not yet justify replacing `v4_both_keep`, so the remaining decision point is the five-model teacher pairwise judge.
+`v4_persource_keep` validates part of the hypothesis: `v4_both_keep` is too strict for `cot_zh`, and the source-aware policy improves that slice. But the tradeoff is not favorable overall. `v4_both_keep` remains best on `finetome` and `openmath_reasoning`, and those gains outweigh the `cot_zh` loss on the current 200-prompt eval.
 
 ### Scorer-level metrics (still relevant for understanding the filter)
 
@@ -150,7 +151,7 @@ Three overlapping lessons from this project:
 
 1. **In-domain test scores overstated progress.** v3 looked much stronger than v4 on in-domain tests but much weaker on `evergreen_v2`'s clean `not_keep` slice. v4's real value is a better operational tradeoff: useful detection of clean-looking bad samples, stable behavior when rule metadata is removed, and far better keep recall than the overly aggressive v3.
 2. **Surface-overlap metrics mislead downstream eval.** BLEU/ROUGE/Token-F1 on the 200-prompt downstream eval ranked `unfiltered` first; teacher pairwise ranking and math exact-answer accuracy ranked `v4_both_keep` first. The proxy metrics rewarded the model that learned to mimic reference phrasing, not the model that produced correct answers.
-3. **Two-scorer intersection beats either scorer alone, at the downstream level.** Neither `v4_conservative` nor `v4_confident` alone produces the best downstream model. Requiring both to agree on `keep` does, and it does so on the metrics that actually reflect answer quality.
+3. **Two-scorer intersection is the most reliable current filtered policy, but the gain is modest.** Neither `v4_conservative` nor `v4_confident` alone produces the best downstream model. Requiring both to agree on `keep` is currently strongest, but the margin over `unfiltered` is small enough that it should be treated as a promising quality signal, not a definitive proof that filtering broadly improves downstream SFT.
 
 ## Repository Layout
 
@@ -166,7 +167,8 @@ Three overlapping lessons from this project:
 
 ## Important Reports
 
-- `reports/phase_e_downstream_pairwise_report.md` — teacher pairwise judge over the original 4 downstream models, plus math accuracy
+- `reports/phase_e_downstream_pairwise_5model_report.md` — current five-model teacher pairwise judge including `v4_persource_keep`
+- `reports/phase_e_downstream_pairwise_report.md` — original four-model teacher pairwise judge, plus math accuracy
 - `reports/phase_e_downstream_prediction_comparison_report.md` — five-model BLEU/ROUGE/Token-F1 comparison plus openmath `\boxed{}` exact match
 - `reports/phase_e_downstream_dataset_report.md` — how the five Phase E downstream training sets were built
 - `reports/evergreen_v2_all_models_eval_report.md` — scorer-level metrics with the normal prompt
@@ -176,8 +178,11 @@ Three overlapping lessons from this project:
 
 ## Next Work
 
-1. Run the five-model teacher pairwise judge for `v4_persource_keep` once `TEACHER_API_KEY` or `OPENAI_API_KEY` is available.
-2. Keep `v4_both_keep` as the current default unless the five-model judge clearly overturns the objective openmath signal.
-3. Scale up: apply the winning policy to a larger SFT pool and verify that the downstream gain persists past 15k records.
-4. Small human audit of evergreen labels to estimate the teacher-label noise floor.
-5. Confidence calibration on the scorer (Phase F): probabilistic output instead of binary, to enable top-K filtering.
+1. Freeze the current v4 conclusion: keep `v4_both_keep` as the default filtered policy, but describe its advantage over `unfiltered` as modest.
+2. Expand evaluation before another major training push: build `evergreen_v3` for scorer-level testing and a larger Phase E downstream eval set beyond the current 200 prompts.
+3. Add out-of-distribution sources beyond `cot_zh`, `finetome`, and `openmath_reasoning`, both for scorer stress tests and downstream SFT validation.
+4. Run a v5 active-learning loop focused on real hard cases, especially openmath clean `not_keep`, scorer disagreement buckets, and OOD clean-looking bad samples.
+5. Scale up downstream validation to a larger clean SFT pool, such as 50k or 100k records, with `unfiltered`, rule-clean, `v4_both_keep`, and v5 policies compared on the same eval.
+6. Add bootstrap confidence intervals for pairwise win rates so small margins such as 105/95 are not overinterpreted.
+7. Small human audit of evergreen labels to estimate the teacher-label noise floor.
+8. Confidence calibration on the scorer (Phase F): probabilistic output or logits instead of binary-only verdicts, enabling top-K filtering and review routing.
