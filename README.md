@@ -101,6 +101,17 @@ Scorer selection rule (used inside Phase E to construct the downstream training 
 
 Single-scorer use favors `v4_conservative` (better precision/recall balance than `v3_conservative`). Intersection use (`v4_both_keep`) is what currently produces the best downstream model.
 
+## Released Adapters
+
+The v4 scorer weights are published as PEFT LoRA adapters on HuggingFace:
+
+| Scorer | HuggingFace adapter |
+|---|---|
+| `v4_conservative` | `zh27/sft-datajudge-v4-conservative-qwen3-8b-lora` |
+| `v4_confident` | `zh27/sft-datajudge-v4-confident-qwen3-8b-lora` |
+
+Both adapters use `Qwen/Qwen3-8B` as the base model. The current default filtering policy is `v4_both_keep`: keep a sample only when both adapters predict `keep`.
+
 ## Prompt Shortcut Check
 
 The no-flag prompt removes `rule_clean` and `rule_flags` from the input. This checks whether the model is actually judging sample content instead of relying on rule metadata.

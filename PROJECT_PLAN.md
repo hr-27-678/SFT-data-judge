@@ -19,6 +19,12 @@ Current model decision:
 - **Aggressive review reference:** `v3_conservative`
 - **Current downstream filtering default:** `v4_both_keep`
 
+Released HuggingFace adapters:
+
+- `v4_conservative`: `zh27/sft-datajudge-v4-conservative-qwen3-8b-lora`
+- `v4_confident`: `zh27/sft-datajudge-v4-confident-qwen3-8b-lora`
+- base model: `Qwen/Qwen3-8B`
+
 Reason:
 
 `v4_conservative` gives the best current balance for automatic filtering. It has lower clean `not_keep` recall than `v3_conservative`, but much better `not_keep` precision and `keep` recall, which matters when the scorer is allowed to remove data from the downstream SFT pool.
